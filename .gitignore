@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# OutputFolder
+ArduinoOutput/
+
+# arduino Json
+.vscode/arduino.json
