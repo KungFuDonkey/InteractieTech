@@ -8,43 +8,44 @@ EventQueue::EventQueue()
 }
 void EventQueue::Add(Event *e)
 {
-  Count++;
   queue[Count] = e;
+  Count++;
   Rootify(Count);
 }
 
 Event* EventQueue::Get(unsigned long millis)
 {
-  if(Count == 0 || millis < queue[1]->time) return nullptr;
-  Event* result = queue[1];
-  queue[1] = queue[Count];
-  
+  if(Count == 0 || millis < queue[0]->time) return nullptr;
+  Event* result = queue[0];
+  Count--;
+  queue[0] = queue[Count];
+
   queue[Count] = nullptr; //can be removed
   
-  Count--;
+  
   Heapify(1);
   return result;
 }
 
 void EventQueue::Rootify(int index){
-  if(index == 1 || queue[index]->time > queue[index / 2]->time) return;
-  Swap(index, index / 2);
+  if(index == 1 || queue[index - 1]->time > queue[index / 2 - 1]->time) return;
+  Swap(index-1, index / 2 -1);
   Rootify(index / 2);
 }
 
 void EventQueue::Heapify(int index){
   if(index * 2 > Count) return;
-  Event* e = queue[index];
+  Event* e = queue[index - 1];
   int otherindex = index;
-  if(e->time > queue[index << 1]->time){
-    otherindex += otherindex; //index * 2
-    e = queue[otherindex];
+  if(e->time > queue[index * 2 - 1]->time){
+    otherindex = index * 2;
+    e = queue[otherindex - 1];
   }
-  if((index * 2) + 1 <= Count && e->time > queue[(index * 2) + 1]->time)
-    otherindex = (index << 1) + 1;
+  if(index * 2 + 1 <= Count && e->time > queue[index * 2]->time)
+    otherindex = (index * 2) + 1;
   
   if (otherindex != index){
-    Swap(index, otherindex);
+    Swap(index - 1, otherindex - 1);
     Heapify(otherindex);
   }
 }

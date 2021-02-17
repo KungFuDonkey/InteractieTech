@@ -12,7 +12,6 @@ class EventQueue
     void Add(Event *e);
     Event* Get(unsigned long millis);
     int Count = 0;
-    //void Debug();
   private:
     Event* queue[QueSize];
     void Rootify(int index);

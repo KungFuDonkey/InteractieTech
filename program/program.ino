@@ -5,6 +5,7 @@
 
 EventQueue* queue;
 void setup() {
+  //Serial.begin(115200); //uses a lot of memory
   queue = new EventQueue();
   queue->Add(new Event(On,1000));
   queue->Add(new Event(Off,2000));
@@ -14,7 +15,7 @@ void setup() {
   pinMode(dled1,OUTPUT);
   pinMode(dled2,OUTPUT);
   pinMode(aled,OUTPUT);
-  //Serial.begin(115200); //uses a lot of memory
+ 
 }
 
 void loop() {
