@@ -1,38 +1,47 @@
 #include "EventQueue.h"
 
+// Empty EventQueue
 EventQueue::EventQueue()
 {
   for(int i = 0; i < QueSize; i++){
     queue[i] = nullptr;
   }
 }
-void EventQueue::Add(Event *e)
+
+/// Enqueue an event into the queue
+void EventQueue::Enqueue(Event *e)
 {
   queue[Count] = e;
   Count++;
   Rootify(Count);
 }
 
-Event* EventQueue::Get(unsigned long millis)
+/// Check if an event must be handled and handle if so
+void EventQueue::PerformEvents(unsigned long millis)
 {
-  if(Count == 0 || millis < queue[0]->time) return nullptr;
-  Event* result = queue[0];
+  if(millis < queue[0]->time || Count == 0) return;
+  PerformEvent(queue[0]);
   Count--;
   queue[0] = queue[Count];
-
-  queue[Count] = nullptr; //can be removed
-  
-  
   Heapify(1);
-  return result;
 }
 
+/// Handle event e
+void EventQueue::PerformEvent(Event* e){
+  if(e != NULL){
+    e->action();
+    delete(e);
+  }
+}
+
+/// From heap, orders the heap from a leaf to a root
 void EventQueue::Rootify(int index){
   if(index == 1 || queue[index - 1]->time > queue[index / 2 - 1]->time) return;
-  Swap(index-1, index / 2 -1);
+  Swap(index - 1, index / 2 - 1);
   Rootify(index / 2);
 }
 
+/// From heap, orders the heap from the index to a leaf
 void EventQueue::Heapify(int index){
   if(index * 2 > Count) return;
   Event* e = queue[index - 1];
@@ -50,6 +59,7 @@ void EventQueue::Heapify(int index){
   }
 }
 
+/// Swaps 2 elements in an array
 void EventQueue::Swap(int index1, int index2){
   Event* tmp = queue[index1];
   queue[index1] = queue[index2];
