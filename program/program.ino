@@ -1,25 +1,18 @@
 #include "EventQueue.h"
-#define dled1 7
-#define dled2 13
-#define aled 9
+
+#define airwick 3
 
 EventQueue* queue;
 void setup() {
   //Serial.begin(115200); //uses a lot of memory
   queue = new EventQueue();
-  queue->Add(new Event(On,1000));
-  queue->Add(new Event(Off,2000));
-  queue->Add(new Event(On2,500));
-  queue->Add(new Event(Off2,1500));
-  queue->Add(new Event(ChangeBrightness, 0));
-  pinMode(dled1,OUTPUT);
-  pinMode(dled2,OUTPUT);
-  pinMode(aled,OUTPUT);
- 
+  queue->Add(new Event(AirwickFire,2000));
+  pinMode(airwick,OUTPUT);
+  digitalWrite(airwick,LOW);
 }
 
 void loop() {
-  PerformEvent(queue->Get(millis()));
+  digitalWrite(airwick,HIGH);
 }
 
 void PerformEvent(Event* e){
@@ -29,40 +22,13 @@ void PerformEvent(Event* e){
   }
 }
 
-#define changespeed 2
-#define recallspeed 25
-short direction = 1;
-int brightness = 0;
-void ChangeBrightness(){
-  brightness += direction * changespeed;
-  if(brightness > 255){
-    direction = -1;
-    brightness = 255;
-  }
-  else if (brightness < 0){
-    direction = 1;
-    brightness = 0;
-  }
-  analogWrite(aled, brightness);
-  queue->Add(new Event(ChangeBrightness,millis() + 5));
+void AirwickFire(){
+  digitalWrite(airwick,HIGH);
+  digitalWrite(LED_BUILTIN,HIGH);
+  queue->Add(new Event(AirwickOff,millis() + 25000));
 }
-
-void On(){
-  digitalWrite(dled1,1);
-  queue->Add(new Event(Off,millis() + 1000));
-}
-
-void Off(){
-  digitalWrite(dled1,0);
-  queue->Add(new Event(On,millis() + 1000));
-}
-
-void On2(){
-  digitalWrite(dled2,1);
-  queue->Add(new Event(Off2,millis() + 1000));
-}
-
-void Off2(){
-  digitalWrite(dled2,0);
-  queue->Add(new Event(On2,millis() + 1000));
+void AirwickOff(){
+  digitalWrite(airwick,LOW);
+  digitalWrite(LED_BUILTIN,LOW);
+  queue->Add(new Event(AirwickFire,millis() + 100000));
 }

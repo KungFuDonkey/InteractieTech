@@ -2,7 +2,6 @@
 #define EVENTQUEUEHEADER
 #define QueSize 10
 
-#include "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
 #include "Event.h"
 
 class EventQueue
