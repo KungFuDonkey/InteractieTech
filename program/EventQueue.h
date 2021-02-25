@@ -3,7 +3,7 @@
 #define QueSize 10
 
 #include "Event.h"
-
+#include "Arduino.h"
 
 /// A 0-based eventqueue for scheduling
 class EventQueue
@@ -11,7 +11,7 @@ class EventQueue
   public:
     EventQueue();
     void Enqueue(Event *e);
-    void PerformEvents(unsigned long millis);
+    void PerformEvents();
     int Count = 0;
   private:
     Event* queue[QueSize];

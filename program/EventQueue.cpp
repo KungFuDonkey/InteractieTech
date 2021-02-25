@@ -16,10 +16,12 @@ void EventQueue::Enqueue(Event *e)
   Rootify(Count);
 }
 
+/// longtime for catching tehe 49.71 day period
+#define longtime 2147483648
 /// Check if an event must be handled and handle if so
-void EventQueue::PerformEvents(unsigned long millis)
+void EventQueue::PerformEvents()
 {
-  if(millis < queue[0]->time || Count == 0) return;
+  if(Count == 0 || millis() < queue[0]->time && queue[0]->time - millis() <= longtime) return;
   PerformEvent(queue[0]);
   Count--;
   queue[0] = queue[Count];
@@ -66,6 +68,7 @@ void EventQueue::Swap(int index1, int index2){
   queue[index2] = tmp;
 }
 
+/// for debugging
 /*
 void EventQueue::Debug(){
   Serial.print("Count: ");
