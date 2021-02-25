@@ -3,8 +3,10 @@
 EventQueue queue; // gebruikt default constructor
 void setup() {
   //Serial.begin(115200); //uses a lot of memory
-  queue.Enqueue(new Event(AirwickFire,2000));
+  //queue.Enqueue(new Event(AirwickFire,2000));
   pinMode(airwick,OUTPUT);
+  pinMode(2,INPUT);
+  attachInterrupt(0,MotionDetected,RISING);
 }
 
 void loop() {
@@ -20,6 +22,8 @@ void AirwickOff(){
   queue.Enqueue(new Event(AirwickFire,millis() + 25000));
 }
 
+int status = LOW;
 void MotionDetected(){
-  //motion is detected
+  status = !status;
+  digitalWrite(13,status);
 }
