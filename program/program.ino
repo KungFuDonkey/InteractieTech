@@ -19,3 +19,7 @@ void AirwickOff(){
   digitalWrite(airwick,LOW);
   queue.Enqueue(new Event(AirwickFire,millis() + 25000));
 }
+
+void MotionDetected(){
+  //motion is detected
+}
