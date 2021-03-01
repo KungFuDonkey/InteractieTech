@@ -3,14 +3,16 @@
 #include "OneWire.h"
 
 
-#ifndef RELEASE 
-#define LOG(x) Serial.print(x)
-#define LOGLN(x) Serial.println(x)
-#define ENABLELOGGING Serial.begin(115200)
-#elif
-#define LOG(x)
-#define LOGLN(x)
-#define ENABLELOGGING
+#define DEBUG
+
+#ifdef DEBUG 
+  #define LOG(x) Serial.print(x)
+  #define LOGLN(x) Serial.println(x)
+  #define ENABLELOGGING Serial.begin(115200)
+#else
+  #define LOG(x)
+  #define LOGLN(x)
+  #define ENABLELOGGING
 #endif
 
 #define airwick 13
@@ -27,8 +29,16 @@ OneWire oneWire(tempPin);
 
 DallasTemperature sensors(&oneWire);
 
-int status = LOW;
+
 EventQueue queue; // gebruikt default constructor
+int active = false;
+int distance;
+long duration;
+int light;
+float temperature;
+bool poop;
+
+
 void setup() {
   ENABLELOGGING;
   queue.Enqueue(new Event(UpdateLight,3000));
@@ -41,21 +51,15 @@ void setup() {
   pinMode(LightSensorPin, INPUT);
 }
 
-
-
-
 void loop() {
   queue.PerformEvents();
-  if(status == HIGH){
-    AirwickFire();
-    status = LOW;
+  if(active){
+    
+
   }
 }
 
-// defines variables
-int distance;
-long duration;
-int light;
+
 
 // delayMicroseconds was used here
 // this was done for the implementation of the sonar
@@ -77,28 +81,35 @@ void UpdateDistance(){
   queue.Enqueue(new Event(UpdateDistance,2000));
 }
 
+//Fires the airwick once
 void AirwickFire(){
   digitalWrite(airwick,HIGH);
   LOGLN(F("Fire"));
   queue.Enqueue(new Event(AirwickOff,25000));
 }
+
+//Disables the airwick
 void AirwickOff(){
   digitalWrite(airwick,LOW);
   LOGLN(F("Reload"));
 }
 
+//Changes to the active status
 void InterruptRoutine(){
-  status = !status;
+  active = true;
   detachInterrupt(interruptPin);
   LOGLN(F("interrupt"));
   queue.Enqueue(new Event(EnableInterrupt,5000));
 }
 
+//Enables interrupts if disabled
 void EnableInterrupt(){
+  active = false;
   EIFR = (1 << 0); // Clears the interrupt flag
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
 }
 
+//Gets the light from the light sensor
 void UpdateLight(){
   light = analogRead(LightSensorPin);
   queue.Enqueue(new Event(UpdateLight, 1000));
@@ -106,15 +117,15 @@ void UpdateLight(){
   LOGLN(light);
 }
 
+//Gets the temperature from the temperature sensor
 void UpdateTemp(){
   sensors.requestTemperatures();
-  float tempC = sensors.getTempCByIndex(0);
-  if(tempC != DEVICE_DISCONNECTED_C){
-    Serial.print(F("Temperature: "));
-    Serial.println(tempC);
+  temperature = sensors.getTempCByIndex(0);
+  if(temperature != DEVICE_DISCONNECTED_C){
+    LOG(F("Temperature: "));
+    LOGLN(temperature);
   }
   else{
-    Serial.print(F("Error in temp sensor"));
+    LOGLN(F("Error in temp sensor"));
   }
-
 }
