@@ -16,7 +16,7 @@ void EventQueue::Enqueue(Event *e)
   Rootify(Count);
 }
 
-/// longtime for catching tehe 49.71 day period
+/// longtime for catching the 49.71 day period
 #define longtime 2147483648
 /// Check if an event must be handled and handle if so
 void EventQueue::PerformEvents()
