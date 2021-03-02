@@ -25,24 +25,26 @@
 
 #define interruptPin digitalPinToInterrupt(2)
 
+#define AirwickFireTime 21000
+#define MinLight 600
+#define MinDistance 10
+
 OneWire oneWire(tempPin);
 
 DallasTemperature sensors(&oneWire);
 
 
 EventQueue queue; // gebruikt default constructor
-int active = false;
-int distance;
+bool active = false;
+int distance = MinDistance;
 long duration;
-int light;
+int light = MinLight;
 float temperature;
 bool poop;
 
 
 void setup() {
   ENABLELOGGING;
-  queue.Enqueue(new Event(UpdateLight,3000));
-  queue.Enqueue(new Event(UpdateDistance,1500));
   pinMode(airwick,OUTPUT);
   pinMode(3,INPUT);
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
@@ -52,10 +54,14 @@ void setup() {
 }
 
 void loop() {
+  
   queue.PerformEvents();
   if(active){
     
-
+    if(distance < MinDistance && light < MinLight){
+      AirwickFire();
+      active = false;
+    }
   }
 }
 
@@ -78,19 +84,31 @@ void UpdateDistance(){
   distance = duration / 66;
   LOG(F("Distance: "));
   LOGLN(distance);
-  queue.Enqueue(new Event(UpdateDistance,2000));
+  if(active)
+  {
+    queue.Enqueue(new Event(UpdateDistance,2000));
+  }
+  
 }
 
+
+void AirwickFireTwice(){
+  digitalWrite(airwick,HIGH);
+  LOGLN(F("FIRE TWICE"));
+  queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
+  queue.Enqueue(new Event(AirwickFire,AirwickFireTime + 1000));
+}
 //Fires the airwick once
 void AirwickFire(){
   digitalWrite(airwick,HIGH);
   LOGLN(F("Fire"));
-  queue.Enqueue(new Event(AirwickOff,25000));
+  queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
 }
 
 //Disables the airwick
 void AirwickOff(){
   digitalWrite(airwick,LOW);
+  EnableInterrupt();
   LOGLN(F("Reload"));
 }
 
@@ -99,12 +117,16 @@ void InterruptRoutine(){
   active = true;
   detachInterrupt(interruptPin);
   LOGLN(F("interrupt"));
-  queue.Enqueue(new Event(EnableInterrupt,5000));
+  queue.Enqueue(new Event(UpdateDistance,0));
+  queue.Enqueue(new Event(UpdateLight,0));
+  //queue.Enquue(new Event(UpdateTemp,0));
 }
 
 //Enables interrupts if disabled
 void EnableInterrupt(){
   active = false;
+  light = MinLight;
+  distance = MinDistance;
   EIFR = (1 << 0); // Clears the interrupt flag
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
 }
@@ -112,7 +134,11 @@ void EnableInterrupt(){
 //Gets the light from the light sensor
 void UpdateLight(){
   light = analogRead(LightSensorPin);
-  queue.Enqueue(new Event(UpdateLight, 1000));
+  
+  if(active){
+    queue.Enqueue(new Event(UpdateLight, 1000));
+  }
+  
   LOG(F("Light: "));
   LOGLN(light);
 }
@@ -128,4 +154,6 @@ void UpdateTemp(){
   else{
     LOGLN(F("Error in temp sensor"));
   }
+
+
 }
