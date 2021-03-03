@@ -6,7 +6,7 @@
 #include "EEPROM.h"
 #include "stdint.h"
 
-#define RELEASE
+#define DEBUG
 
 #ifdef DEBUG 
   #define LOG(x) Serial.print(x)
@@ -97,9 +97,9 @@ void loop() {
     if(digitalRead(fireButtonPin) == LOW){
       AirwickFireTwice();
     }
-    if(menuUpButton.GetDown()){
-      MenuUp();
-    }
+  }
+  if(!settings && menuUpButton.GetDown()){
+    MenuUp();
   }
 #ifdef DEBUG
   if(active){
@@ -193,7 +193,6 @@ void InterruptRoutine(){
 
 //Enables interrupts if disabled
 void EnableInterrupt(){
-  active = false;
   light = MinLight;
   distance = MinDistance;
   EIFR = (1 << 0); // Clears the interrupt flag
