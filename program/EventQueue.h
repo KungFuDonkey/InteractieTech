@@ -1,6 +1,6 @@
 #ifndef EVENTQUEUEHEADER
 #define EVENTQUEUEHEADER
-#define QueSize 10
+#define QueSize 24
 
 
 #include "Event.h"

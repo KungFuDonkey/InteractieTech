@@ -18,6 +18,8 @@
   #define ENABLELOGGING
 #endif
 
+#define returnToMenuTimer 10000
+
 #define airwick 13
 
 #define trigPin 10
@@ -211,83 +213,106 @@ void MenuUp(){
   menu = menu + 1 >= menuCount ? 0 : menu + 1;
 }
 
+unsigned long timer = returnToMenuTimer;
 void DisplayMenu(){
   queue.Enqueue(new Event(DisplayMenu,drawSpeed));
   lcd.setCursor(0,0);
-  switch (menu)
-  {
-    case 0:
-      defaultMenu();
-      drawSpeed = 500;
-      break;
-    case 1:
-      previewSettingsMenu();
-      drawSpeed = 500;
-      break;
-    case 2:
-      settingsMenu();
-      drawSpeed = 50;
-      break;
-    default:
-      lcd.print("NO MENU ");
-      lcd.print(menu);
-      LOGLN("OTHER MENU");
-      break;
+  if (menu == 1){
+    previewSettingsMenu();
+    drawSpeed = 50;
+    CheckTimer();
+  }
+  else if (menu == 2){
+    settingsMenu();
+    drawSpeed = 50;
+  }
+  else {
+    defaultMenu();
+    drawSpeed = 250;
+    timer = millis() + returnToMenuTimer;
   }
 
 }
 
 void defaultMenu(){
-  LOGLN("default menu");
   lcd.print("Temp: ");
   lcd.print(temperature);
   lcd.print("C      ");
   lcd.setCursor(0, 1);
   lcd.print("Shots: ");
-  byte firstValue = EEPROM.read(0);
-  byte secondValue = EEPROM.read(1);
-  int value = (firstValue << 8) + secondValue;
-  lcd.print(value);
+  lcd.print(GetShots());
   lcd.print("       ");
 }
+
+bool printed = false;
 
 void previewSettingsMenu(){
   lcd.print("Settings       ");
   lcd.setCursor(0,1);
   lcd.print("               ");
+
   if(menuConfirmButton.GetDown()){
     menu = 2;
     settings = true;
+    ResetMenuTimer();
     menuItem = 0;
   }
 }
 
+int GetDelay(){
+  return EEPROM.read(2);
+}
+void WriteDelay(int delay){
+  EEPROM.write(2, delay);
+}
+
+int GetShots(){
+  byte firstValue = EEPROM.read(0);
+  byte secondValue = EEPROM.read(1);
+  return (firstValue << 8) + secondValue;
+}
+void WriteShots(int shots){
+  int firstValue = shots >> 8;
+  int secondValue = (shots << 8) >> 8;
+  EEPROM.write(0,firstValue);
+  EEPROM.write(1,secondValue);
+}
+
 void settingsMenu(){
   lcd.setCursor(0,0);
-  switch (menuItem)
-  {
-  case 0:
-    LOGLN("DELAY");
-    lcd.print("Change delay   ");
-    lcd.setCursor(0,1);
-    lcd.print("               ");
+  if(menuItem == 0){
+    if(!printed){
+      LOGLN("DELAY");
+      lcd.print("Change delay   ");
+      lcd.setCursor(0,1);
+      lcd.print("               ");
+      printed = true;
+    }
+    CheckTimer();
     if (menuConfirmButton.GetDown())
     {
       menuItem = 1;
+      ResetMenuTimer();
     }
     if (menuUpButton.GetDown()){
       menuItem = 2;
+      ResetMenuTimer();
     }
-    break;
-  case 1:
+  }
+  else if(menuItem == 1){
     LOGLN("NEWDELAY");
-    lcd.print("New delay:     ");
+    if(!printed){
+      lcd.print("New delay:     ");
+      printed = true;
+    }
+    CheckTimer();
     lcd.setCursor(0, 1);
-    int delay = EEPROM.read(2);
+    int delay = GetDelay();
     if (menuUpButton.GetDown())
     {
       delay = delay + 5 > 60 ? 15 : delay + 5;
-      EEPROM.write(2, delay);
+      WriteDelay(delay);
+      ResetMenuTimer();
     }
     lcd.print(delay);
     lcd.print("s            ");
@@ -295,50 +320,89 @@ void settingsMenu(){
     if (menuConfirmButton.GetDown())
     {
       menuItem = 0;
+      ResetMenuTimer();
     }
-    break;
-  case 2:
-    LOGLN("RESET SPRAYS");
-    lcd.print("Reset sprays   ");
-    lcd.setCursor(0,1);
-    lcd.print("               ");
+  }
+  else if (menuItem == 2){
+    if(!printed){
+      LOGLN("RESET SPRAYS");
+      lcd.print("Reset sprays   ");
+      lcd.setCursor(0,1);
+      lcd.print("               ");
+      printed = true;
+    }
+    CheckTimer();
     if (menuConfirmButton.GetDown())
     {
       menuItem = 3;
+      ResetMenuTimer();
     }
     if (menuUpButton.GetDown()){
-      menuItem = 4;
+      menuItem = 5;
+      ResetMenuTimer();
     }
-    break;
-  case 3:
-    LOGLN("CONFIRM");
-    lcd.print("Confirm?        ");
-    lcd.setCursor(0,1);
-    lcd.print("               ");
+  }
+  else if (menuItem == 3){
+    if(!printed){
+      LOGLN("CONFIRM");
+      lcd.print("Confirm?        ");
+      lcd.setCursor(0,1);
+      lcd.print("               ");
+      printed = true;
+    }
+    CheckTimer();
     if (menuConfirmButton.GetDown())
     {
-      EEPROM.write(0, 5);
-      EEPROM.write(1, 96);
+      WriteShots(2400);
+      menuItem = 2;
+      ResetMenuTimer();
     }
     if (menuUpButton.GetDown())
     {
       menuItem = 2;
+      ResetMenuTimer();
     }
-    break;
-  default:
-    LOGLN("BACK");
-    lcd.print("Back           ");
-    lcd.setCursor(0,1);
-    lcd.print("               ");
+  }
+  else if (menuItem == 4){
+    if(!printed){
+      LOGLN("RESETTED");
+      lcd.print("Sprays have been reset");
+      printed = true;
+    }
+    CheckTimer();
+    if (menuConfirmButton.GetDown() || menuUpButton.GetDown()){
+      menuItem = 2;
+      ResetMenuTimer();
+    }
+  }
+  else{
+    if(!printed){
+      LOGLN("BACK");
+      lcd.print("Back           ");
+      lcd.setCursor(0,1);
+      lcd.print("               ");
+    }
+    CheckTimer();
     if(menuConfirmButton.GetDown()){
       settings = false;
       menu = 1;
+      ResetMenuTimer();
     }
     if(menuUpButton.GetDown()){
       menuItem = 0;
+      ResetMenuTimer();
     }
-    break;
   }
-  
+}
+void ResetMenuTimer(){
+  printed = false;
+  timer = millis() + returnToMenuTimer;
 }
 
+void CheckTimer(){
+  if(millis() > timer){ // needs checkup
+    settings = false;
+    menu = 0;
+    printed = false;
+  }
+}
