@@ -30,7 +30,7 @@
 
 #define interruptPin digitalPinToInterrupt(2)
 
-#define AirwickFireTime 21000
+#define AirwickFireTime 16000
 #define MinLight 600
 #define MinDistance 10
 
@@ -95,12 +95,22 @@ void loop() {
       active = false;
     }
     if(digitalRead(fireButtonPin) == LOW){
-      AirwickFire();
+      AirwickFireTwice();
     }
     if(menuUpButton.GetDown()){
       MenuUp();
     }
   }
+#ifdef DEBUG
+  if(active){
+    digitalWrite(fireStatePin,HIGH);
+  }
+  else{
+    digitalWrite(fireStatePin,LOW);
+  }
+#endif
+
+
 
 }
 
@@ -131,18 +141,26 @@ void UpdateDistance(){
 
 
 void AirwickFireTwice(){
-  digitalWrite(airwick,HIGH);
-  digitalWrite(fireStatePin,HIGH);
-  LOGLN(F("FIRE TWICE"));
-  queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
-  queue.Enqueue(new Event(AirwickFire,AirwickFireTime + 1000));
+  if(!firing){
+    firing = true;
+    digitalWrite(airwick,HIGH);
+#ifndef DEBUG
+    digitalWrite(fireStatePin,HIGH);
+#endif
+    LOGLN(F("FIRE TWICE"));
+    queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
+    queue.Enqueue(new Event(AirwickFire,AirwickFireTime + 1000));
+  }
+
 }
 //Fires the airwick once
 void AirwickFire(){
   if(!firing){
     firing = true;
     digitalWrite(airwick,HIGH);
+#ifndef DEBUG
     digitalWrite(fireStatePin,HIGH);
+#endif
     LOGLN(F("Fire"));
     queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
   }
@@ -153,7 +171,9 @@ void AirwickFire(){
 void AirwickOff(){
   firing = false;
   digitalWrite(airwick,LOW);
+#ifndef DEBUG
   digitalWrite(fireStatePin,LOW);
+#endif
   EnableInterrupt();
   LOGLN(F("Reload"));
 }
