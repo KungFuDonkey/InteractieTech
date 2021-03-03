@@ -6,7 +6,7 @@
 #include "EEPROM.h"
 #include "stdint.h"
 
-#define DEBUG
+#define RELEASE
 
 #ifdef DEBUG 
   #define LOG(x) Serial.print(x)
@@ -26,7 +26,7 @@
 #define echoPin 11
 #define LightSensorPin A0
 
-#define tempPin 4
+#define tempPin 3
 
 #define interruptPin digitalPinToInterrupt(2)
 
@@ -142,33 +142,36 @@ void UpdateDistance(){
 
 void AirwickFireTwice(){
   if(!firing){
-    firing = true;
-    digitalWrite(airwick,HIGH);
-#ifndef DEBUG
-    digitalWrite(fireStatePin,HIGH);
-#endif
+    FireRoutine();
     LOGLN(F("FIRE TWICE"));
-    queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
     queue.Enqueue(new Event(AirwickFire,AirwickFireTime + 1000));
+    active = false;
   }
 
 }
 //Fires the airwick once
 void AirwickFire(){
   if(!firing){
-    firing = true;
-    digitalWrite(airwick,HIGH);
-#ifndef DEBUG
-    digitalWrite(fireStatePin,HIGH);
-#endif
+    FireRoutine();
     LOGLN(F("Fire"));
-    queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
   }
+}
 
+void FireRoutine(){
+  active = false;  
+  firing = true;
+  digitalWrite(airwick,HIGH);
+#ifndef DEBUG
+  digitalWrite(fireStatePin,HIGH);
+#endif
+  queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
 }
 
 //Disables the airwick
 void AirwickOff(){
+  int shots = GetShots();
+  shots = shots - 1 < 0 ? 0 : shots - 1;
+  WriteShots(shots);
   firing = false;
   digitalWrite(airwick,LOW);
 #ifndef DEBUG
