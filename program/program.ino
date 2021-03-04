@@ -84,6 +84,7 @@ void setup() {
   pinMode(heartBeatPin,OUTPUT);
   pinMode(fireButtonPin, INPUT);
   pinMode(magnetPin,INPUT);
+  pinMode(tempPin,INPUT);
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
   menuConfirmButton.Init(menuConfirmPin);
@@ -195,7 +196,7 @@ void InterruptRoutine(){
   LOGLN(F("interrupt"));
   queue.Enqueue(new Event(UpdateDistance,0));
   queue.Enqueue(new Event(UpdateLight,0));
-  //queue.Enquue(new Event(UpdateTemp,0));
+  queue.Enqueue(new Event(UpdateTemp,0));
 }
 
 //Enables interrupts if disabled
@@ -235,7 +236,7 @@ void UpdateTemp(){
   else{
     LOGLN(F("Error in temp sensor"));
   }
-  queue.Enqueue(new Event(UpdateTemp, 1000));
+  if (active) queue.Enqueue(new Event(UpdateTemp, 1000));
 }
 
 void UpdateMagnet(){
