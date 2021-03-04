@@ -87,6 +87,7 @@ void setup() {
   pinMode(tempPin,INPUT);
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
+  queue.Enqueue(new Event(UpdateTemp,0));
   menuConfirmButton.Init(menuConfirmPin);
   menuUpButton.Init(menuUpPin);
 
@@ -236,7 +237,7 @@ void UpdateTemp(){
   else{
     LOGLN(F("Error in temp sensor"));
   }
-  if (active) queue.Enqueue(new Event(UpdateTemp, 1000));
+  queue.Enqueue(new Event(UpdateTemp, 1000));
 }
 
 void UpdateMagnet(){
