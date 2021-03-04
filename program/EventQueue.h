@@ -18,8 +18,10 @@ class EventQueue
     Event* queue[QueSize];
     void Rootify(int index);
     void Heapify(int index);
+    void CheckMillis();
     void Swap(int index1, int index2);
     void PerformEvent(Event* e);
+    unsigned long prevMillis = 0;
 };
 
 #endif

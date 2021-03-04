@@ -11,17 +11,20 @@ EventQueue::EventQueue()
 /// Enqueue an event into the queue
 void EventQueue::Enqueue(Event *e)
 {
+  CheckMillis();
   queue[Count] = e;
   Count++;
   Rootify(Count);
 }
+
 
 /// longtime for catching the 49.71 day period
 #define longtime 2147483648
 /// Check if an event must be handled and handle if so
 void EventQueue::PerformEvents()
 {
-  if(Count == 0 || millis() < queue[0]->time && queue[0]->time - millis() <= longtime) return;
+  CheckMillis();
+  if(Count == 0 || millis() < queue[0]->time || (millis() > queue[0]->time && millis() - queue[0]->time > longtime)) return;
   PerformEvent(queue[0]);
   Count--;
   queue[0] = queue[Count];
@@ -36,9 +39,23 @@ void EventQueue::PerformEvent(Event* e){
   }
 }
 
+void EventQueue::CheckMillis(){
+  unsigned long mil = millis();
+  if(mil >= prevMillis){
+    prevMillis = mil;
+    return;
+  } 
+  for(int i = 0; i < Count; i++)
+  {
+    if(queue[i]->time > longtime){
+      queue[i]->time = 0;
+    }
+  }
+}
+
 /// From heap, orders the heap from a leaf to a root
 void EventQueue::Rootify(int index){
-  if(index == 1 || queue[index - 1]->time > queue[index / 2 - 1]->time) return;
+  if(index == 1 || queue[index - 1]->time > queue[index / 2 - 1]->time || queue[index / 2 - 1]->time - queue[index - 1]->time > longtime) return;
   Swap(index - 1, index / 2 - 1);
   Rootify(index / 2);
 }
@@ -48,11 +65,11 @@ void EventQueue::Heapify(int index){
   if(index * 2 > Count) return;
   Event* e = queue[index - 1];
   int otherindex = index;
-  if(e->time > queue[index * 2 - 1]->time){
+  if((e->time > queue[index * 2 - 1]->time && e->time - queue[index * 2 - 1]->time < longtime) || (e->time < queue[index * 2 - 1]->time && queue[index * 2 - 1]->time - e->time > longtime)){
     otherindex = index * 2;
     e = queue[otherindex - 1];
   }
-  if(index * 2 + 1 <= Count && e->time > queue[index * 2]->time)
+  if(index * 2 < Count && (e->time > queue[index * 2]->time && (e->time - queue[index * 2]->time < longtime) || (e->time < queue[index * 2]->time && queue[index * 2]->time - e->time > longtime)))
     otherindex = (index * 2) + 1;
   
   if (otherindex != index){

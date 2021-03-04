@@ -18,15 +18,19 @@
   #define ENABLELOGGING
 #endif
 
+
+
+
 #define returnToMenuTimer 10000
 
 #define airwick 13
-
 #define trigPin 10
 #define echoPin 11
 #define LightSensorPin A0
 
 #define tempPin 3
+
+#define magnetPin 12
 
 #define interruptPin digitalPinToInterrupt(2)
 
@@ -55,6 +59,7 @@ EventQueue queue; // gebruikt default constructor
 Button menuUpButton;
 Button menuConfirmButton;
 int drawSpeed = 1000;
+int magnet = HIGH;
 bool settings = false;
 bool active = false;
 int distance = MinDistance;
@@ -78,6 +83,7 @@ void setup() {
   pinMode(fireStatePin,OUTPUT);
   pinMode(heartBeatPin,OUTPUT);
   pinMode(fireButtonPin, INPUT);
+  pinMode(magnetPin,INPUT);
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
   menuConfirmButton.Init(menuConfirmPin);
@@ -149,6 +155,7 @@ void AirwickFireTwice(){
   }
 
 }
+
 //Fires the airwick once
 void AirwickFire(){
   if(!firing){
@@ -231,11 +238,15 @@ void UpdateTemp(){
   queue.Enqueue(new Event(UpdateTemp, 1000));
 }
 
+void UpdateMagnet(){
+  magnet = digitalRead(magnetPin);
+}
+
 void MenuUp(){
   menu = menu + 1 >= menuCount ? 0 : menu + 1;
 }
 
-unsigned long timer = returnToMenuTimer;
+unsigned long lastAction = returnToMenuTimer;
 void DisplayMenu(){
   queue.Enqueue(new Event(DisplayMenu,drawSpeed));
   lcd.setCursor(0,0);
@@ -251,7 +262,7 @@ void DisplayMenu(){
   else {
     defaultMenu();
     drawSpeed = 250;
-    timer = millis() + returnToMenuTimer;
+    lastAction = millis() + returnToMenuTimer;
   }
 
 }
@@ -418,11 +429,11 @@ void settingsMenu(){
 }
 void ResetMenuTimer(){
   printed = false;
-  timer = millis() + returnToMenuTimer;
+  lastAction = millis();
 }
 
 void CheckTimer(){
-  if(millis() > timer){ // needs checkup
+  if(millis() - lastAction > returnToMenuTimer){ 
     settings = false;
     menu = 0;
     printed = false;
