@@ -9,53 +9,37 @@ public:
   long lastDebounceTime = LOW;
   int lastSteadyState = LOW;
   int pin;
+  int buttonID; // on multiple button pins this is the order in which the buttons are connected, 1-based
+
+  int lastSteadyValue = 1023;
+  int lowerBound;
+  int upperBound;
+  bool pressed = false;
+
   Button() {
     pin = 0;
   };
-  void Init(int pin){
+  void Init(int pin, int buttonID){
     pinMode(pin, INPUT);
     this->pin = pin;
+    this->buttonID = buttonID;
+    int estimateVolt = 1024 - (1024 / buttonID);
+    lowerBound = estimateVolt - 10;
+    upperBound = estimateVolt + 10;
   }
+
   bool GetDown(){
-      // read the state of the switch/button:
-    int currentState = digitalRead(pin);
-    bool returnValue = false;
+    int value = analogRead(pin);
+    if (value > lowerBound && value < upperBound && !pressed)
+    {
+      pressed = true;
+      return true;
+    }
+    else if (pressed && (value < lowerBound || value > upperBound))
+    {
+      pressed = false;
+    }
     
-
-    if(currentState == LOW && previousState == LOW){
-      return returnValue;
-    }
-    else if (currentState == HIGH && previousState == LOW){
-      previousState = HIGH;
-    }
-
-    
-    // check to see if you just pressed the button
-    // (i.e. the input went from LOW to HIGH), and you've waited long enough
-    // since the last press to ignore any noise:
-
-    // If the switch/button changed, due to noise or pressing:
-    if (currentState != lastFlickerableState) {
-      // reset the debouncing timer
-      lastDebounceTime = millis();
-      // save the the last flickerable state
-      lastFlickerableState = currentState;
-    }
-
-    if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
-      // whatever the reading is at, it's been there for longer than the debounce
-      // delay, so take it as the actual current state:
-
-      if(lastSteadyState == HIGH && currentState == LOW){
-        returnValue = true;
-        previousState = LOW;
-      }
-        
-        
-
-      // save the the last steady state
-      lastSteadyState = currentState;
-    }
-    return returnValue;
+    return false;
   }
 };

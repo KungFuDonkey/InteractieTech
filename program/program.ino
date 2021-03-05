@@ -30,7 +30,7 @@
 
 #define tempPin 3
 
-#define magnetPin 12
+#define magnetPin A2
 
 #define interruptPin digitalPinToInterrupt(2)
 
@@ -44,7 +44,7 @@
 #define fireButtonPin A1 
 
 #define menuUpPin A2
-#define menuConfirmPin A3
+#define menuConfirmPin A2
 
 #define menuCount 2
 
@@ -58,6 +58,7 @@ EventQueue queue; // gebruikt default constructor
 
 Button menuUpButton;
 Button menuConfirmButton;
+Button magnetSensor;
 int drawSpeed = 1000;
 int magnet = HIGH;
 bool settings = false;
@@ -88,9 +89,9 @@ void setup() {
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
   queue.Enqueue(new Event(UpdateTemp,0));
-  menuConfirmButton.Init(menuConfirmPin);
-  menuUpButton.Init(menuUpPin);
-
+  menuUpButton.Init(menuUpPin, 1);
+  menuConfirmButton.Init(menuConfirmPin, 2);
+  magnetSensor.Init(magnetPin, 3);
   lcd.begin(16, 2);
 }
 
@@ -264,9 +265,8 @@ void DisplayMenu(){
   else {
     defaultMenu();
     drawSpeed = 250;
-    lastAction = millis() + returnToMenuTimer;
+    lastAction = millis();// + returnToMenuTimer;
   }
-
 }
 
 void defaultMenu(){
