@@ -1,15 +1,9 @@
 #include "Arduino.h"
 
-#define DEBOUNCE_DELAY 50
 class Button {
 public:
-  int previousState = LOW;
-  int currentState = LOW;
-  int lastFlickerableState = LOW;
-  long lastDebounceTime = LOW;
-  int lastSteadyState = LOW;
   int pin;
-  int buttonID; // on multiple button pins this is the order in which the buttons are connected, 1-based
+  int buttonID; 
 
   int lastSteadyValue = 1023;
   int lowerBound;
@@ -19,12 +13,10 @@ public:
   Button() {
     pin = 0;
   };
-
-  //Initialization of a button
-  void Init(int pin, int buttonID){
+  void Init(int pin, int buttonID){ // on multiple button pins the buttonID is the order in which the buttons are connected, 1-based
     pinMode(pin, INPUT);
     this->pin = pin;
-    this->buttonID = buttonID;
+    
     int estimateVolt = 1024 - (1024 / buttonID);
     lowerBound = estimateVolt - 10;
     upperBound = estimateVolt + 10;
