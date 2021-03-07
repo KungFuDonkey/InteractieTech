@@ -6,7 +6,7 @@
 #include "EEPROM.h"
 #include "stdint.h"
 
-#define DEBUG
+#define RELEASE
 
 #ifdef DEBUG 
   #define LOG(x) Serial.print(x)
@@ -41,7 +41,7 @@
 #define fireStatePin A4
 #define heartBeatPin A5
 
-#define fireButtonPin 3 
+#define fireButtonPin digitalPinToInterrupt(3) 
 
 #define menuUpPin A2
 #define menuConfirmPin A2
@@ -83,6 +83,7 @@ void setup() {
   pinMode(airwick,OUTPUT);
   pinMode(3,INPUT);
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
+  attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
@@ -203,6 +204,17 @@ void AirwickFireTwice(){
 
 }
 
+void AirwickFireInterrupt(){
+  detachInterrupt(fireButtonPin);
+  queue.Enqueue(new Event(EnableFireInterrupt,20000));
+  AirwickFire();
+}
+
+void EnableFireInterrupt(){
+  EIFR = (1 << 0); // Clears the interrupt flag
+  attachInterrupt(interruptPin,InterruptRoutine,FALLING);
+}
+
 //Fires the airwick once
 void AirwickFire(){
   if(!firing){
@@ -242,12 +254,8 @@ void InterruptRoutine(){
   LOGLN(F("interrupt"));
   queue.Enqueue(new Event(UpdateDistance,0));
   queue.Enqueue(new Event(UpdateLight,0));
-<<<<<<< HEAD
-=======
-  queue.Enqueue(new Event(UpdateTemp,0));
 
   lastMotionTime = millis();
->>>>>>> 4f76fc7b79f58461c1f0a52aacc5bf26b099a014
 }
 
 //Enables interrupts if disabled
