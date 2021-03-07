@@ -70,6 +70,7 @@ bool firing = false;
 int menu = 0;
 int heartBeat = LOW;
 int menuItem = 0;
+bool toiletButtonPress = false;
 
 bool pooping = false;
 bool cleaning = false;
@@ -83,7 +84,7 @@ void setup() {
   pinMode(2,INPUT); //Motion sensor interrupt pin
   pinMode(3,INPUT); //Button interrupt pin
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
-  attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+  //attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
@@ -112,7 +113,7 @@ void loop() {
 
   if (active && !settings)
   {
-    if (CheckMagnet() && !cleaning) // magnet sensor is placed on the flush button in the toilet, which is the indicator that someone went to the toilet
+    if (toiletButtonPress && !cleaning) // magnet sensor is placed on the flush button in the toilet, which is the indicator that someone went to the toilet
     {
       pooping = true;
       peeing = true;
@@ -124,7 +125,6 @@ void loop() {
       if (!pooping)   // if the person was not flushing before using the brush, this indicates they are just cleaning
       {                                             
         cleaning = true;
-        LOGLN("");
       }
       else            // if the person has flushed and used the brush, this indicates they did a number two
       {
@@ -132,7 +132,6 @@ void loop() {
         cleaning = false;
       }
     }
-    CheckMotion();
     if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
     {                                                   // the airwick will fire or not depending on the activity
       if (peeing)
@@ -246,7 +245,8 @@ void InterruptRoutine(){
   LOGLN(F("interrupt"));
   queue.Enqueue(new Event(UpdateDistance,0));
   queue.Enqueue(new Event(UpdateLight,0));
-
+  queue.Enqueue(new Event(CheckMagnet,0));
+  queue.Enqueue(new Event(CheckMotion,0));
   lastMotionTime = millis();
 }
 
@@ -584,22 +584,26 @@ int getDefaultDistance(){
 
 void CheckMotion(){
   int motion = digitalRead(motionPin);
+  LOG(F("Motion: "));
+  LOGLN(motion);
   if (motion == HIGH)
   {
     lastMotionTime = millis();
   }
+
+  if(active) queue.Enqueue(new Event(CheckMotion, 500));
 }
 
-bool CheckMagnet(){
+void CheckMagnet(){
   int value = analogRead(magnetPin);
-  if (value < 700)
-  {
-    return false;
+
+#ifdef DEBUG
+  if(toiletButtonPress != value >= 700){
+    LOG(F("Magnet: "));
+    LOGLN(toiletButtonPress);
   }
-  else
-  {
-    return true;
-  }
-  
-  
+#endif
+
+  toiletButtonPress = value >= 700;
+  if(active) queue.Enqueue(new Event(CheckMagnet, 200));
 }
