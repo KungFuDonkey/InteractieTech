@@ -19,6 +19,8 @@ public:
   Button() {
     pin = 0;
   };
+
+  //Initialization of a button
   void Init(int pin, int buttonID){
     pinMode(pin, INPUT);
     this->pin = pin;
@@ -28,6 +30,7 @@ public:
     upperBound = estimateVolt + 10;
   }
 
+  // Gets if a button is down
   bool GetDown(){
     int value = analogRead(pin);
     if (value > lowerBound && value < upperBound && !pressed)

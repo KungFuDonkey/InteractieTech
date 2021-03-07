@@ -39,6 +39,7 @@ void EventQueue::PerformEvent(Event* e){
   }
 }
 
+/// Checks if the millis went back to 0
 void EventQueue::CheckMillis(){
   unsigned long mil = millis();
   if(mil >= prevMillis){

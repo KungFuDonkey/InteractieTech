@@ -6,7 +6,7 @@
 #include "EEPROM.h"
 #include "stdint.h"
 
-#define RELEASE
+#define DEBUG
 
 #ifdef DEBUG 
   #define LOG(x) Serial.print(x)
@@ -18,9 +18,6 @@
   #define ENABLELOGGING
 #endif
 
-
-
-
 #define returnToMenuTimer 10000
 
 #define airwick 13
@@ -29,8 +26,6 @@
 #define LightSensorPin A0
 
 #define tempPin A1
-
-#define magnetPin A2
 
 #define interruptPin digitalPinToInterrupt(2)
 
@@ -77,11 +72,13 @@ bool pooping = false;
 bool peeing = false;
 bool cleaning = false;
 int lastMotionTime = 0;
+unsigned long lastAction = returnToMenuTimer;
 
 void setup() {
   ENABLELOGGING;
   pinMode(airwick,OUTPUT);
-  pinMode(3,INPUT);
+  pinMode(2,INPUT); //Motion sensor interrupt pin
+  pinMode(3,INPUT); //Button interrupt pin
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
   attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
@@ -90,7 +87,6 @@ void setup() {
   pinMode(fireStatePin,OUTPUT);
   pinMode(heartBeatPin,OUTPUT);
   pinMode(fireButtonPin, INPUT);
-  pinMode(magnetPin,INPUT);
   pinMode(tempPin,INPUT);
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
@@ -175,6 +171,7 @@ void UpdateDistance(){
 }
 
 
+// Fires the airwick twice
 void AirwickFireTwice(){
   if(!firing){
     FireRoutine();
@@ -182,15 +179,17 @@ void AirwickFireTwice(){
     queue.Enqueue(new Event(AirwickFire,AirwickFireTime + 1000));
     active = false;
   }
-
 }
 
+// Fires the airwick via an interrupt button and disables the interrupt for
+// 20 seconsds
 void AirwickFireInterrupt(){
   detachInterrupt(fireButtonPin);
   queue.Enqueue(new Event(EnableFireInterrupt,20000));
   AirwickFire();
 }
 
+// Enables the fire interrupt again
 void EnableFireInterrupt(){
   EIFR = (1 << 0); // Clears the interrupt flag
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
@@ -204,6 +203,7 @@ void AirwickFire(){
   }
 }
 
+// The standard routine for firing
 void FireRoutine(){
   active = false;  
   firing = true;
@@ -228,7 +228,7 @@ void AirwickOff(){
   LOGLN(F("Reload"));
 }
 
-//Changes to the active status
+//Changes to the active status via the motion sensor
 void InterruptRoutine(){
   active = true;
   detachInterrupt(interruptPin);
@@ -239,7 +239,7 @@ void InterruptRoutine(){
   lastMotionTime = millis();
 }
 
-//Enables interrupts if disabled
+//Enables enables the motion sensor interruupt
 void EnableInterrupt(){
   light = MinLight;
   distance = MinDistance;
@@ -259,6 +259,7 @@ void UpdateLight(){
   LOGLN(light);
 }
 
+//Turns the beat led on or off
 void UpdateBeat(){
   heartBeat = !heartBeat;
   digitalWrite(heartBeatPin,heartBeat);
@@ -279,18 +280,13 @@ void UpdateTemp(){
   queue.Enqueue(new Event(UpdateTemp, 1000));
 }
 
-void UpdateMagnet(){
-  magnet = digitalRead(magnetPin);
-  LOG(F("Magnet: "));
-  LOGLN(magnet);
-  if(active) queue.Enqueue(new Event(UpdateMagnet, 200));
-}
-
+// Switches the menu status
 void MenuUp(){
   menu = menu + 1 >= menuCount ? 0 : menu + 1;
 }
 
-unsigned long lastAction = returnToMenuTimer;
+
+// Prints the current menu to the lcd screen
 void DisplayMenu(){
   queue.Enqueue(new Event(DisplayMenu,drawSpeed));
   lcd.setCursor(0,0);
@@ -310,6 +306,7 @@ void DisplayMenu(){
   }
 }
 
+// The default menu template
 void defaultMenu(){
   lcd.print("Temp: ");
   lcd.print(temperature);
@@ -322,6 +319,7 @@ void defaultMenu(){
 
 bool printed = false;
 
+// The menu before the settings template
 void previewSettingsMenu(){
   if (!printed)
   {
@@ -340,18 +338,22 @@ void previewSettingsMenu(){
   }
 }
 
+// Gets the current spray delay from EEPROM
 int GetDelay(){
   return EEPROM.read(2);
 }
+// Writes the current spray delay to EEPROM
 void WriteDelay(int delay){
   EEPROM.write(2, delay);
 }
 
+// Gets the shots from the EEPROM
 int GetShots(){
   byte firstValue = EEPROM.read(0);
   byte secondValue = EEPROM.read(1);
   return (firstValue << 8) + secondValue;
 }
+// Writes the shots to the EEPROM
 void WriteShots(int shots){
   int firstValue = shots >> 8;
   int secondValue = (shots << 8) >> 8;
@@ -359,6 +361,7 @@ void WriteShots(int shots){
   EEPROM.write(1,secondValue);
 }
 
+// Prints the current settings menu to the lcd screen
 void settingsMenu(){
   lcd.setCursor(0,0);
   if(menuItem == 0){
@@ -541,11 +544,14 @@ void settingsMenu(){
     }
   }
 }
+
+// Resets the menu timer to return to the default menu
 void ResetMenuTimer(){
   printed = false;
   lastAction = millis();
 }
 
+// Checks the menu timer to return to the default menu
 void CheckTimer(){
   if(millis() - lastAction > returnToMenuTimer){ 
     settings = false;
@@ -554,11 +560,13 @@ void CheckTimer(){
   }
 }
 
+// Sets the default distance
 void setDefaultDistance(){
   UpdateDistance();
   EEPROM.write(3, distance);
 }
 
+// Gets the default distance
 int getDefaultDistance(){
   return EEPROM.read(3);
 }
