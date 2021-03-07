@@ -103,21 +103,6 @@ void setup() {
 
 void loop() {
   queue.PerformEvents();
-  /*if(active && !settings){
-    
-    if(distance < MinDistance && light < MinLight){
-      unsigned long sprayDelay = GetDelay();
-      //queue.Enqueue(new Event(AirwickFire,sprayDelay * 1000 - AirwickFireTime));
-      active = false;
-    }
-    
-    if(digitalRead(fireButtonPin) == LOW){
-      //AirwickFireTwice();
-    }
-  }
-  if(!settings && menuUpButton.GetDown()){
-    MenuUp();
-  }*/
 #ifdef DEBUG
   if(active){
     digitalWrite(fireStatePin,HIGH);
@@ -129,17 +114,15 @@ void loop() {
 
   if (active && !settings)
   {
-    if (magnetSensor.GetDown()) // magnet sensor is placed on the big flush button in the toilet, which is the indicator that someone did a number two
+    if (magnetSensor.GetDown() && !cleaning) // magnet sensor is placed on the big flush button in the toilet, which is the indicator that someone did a number two
     {
-      cleaning = false;
       pooping = true;
       LOGLN("SOMEBODY IS POOPING");
     }
     
-    if (abs(distance - getDefaultDistance()) > 5)   // defeault distance can be set in menu, when this is not the default, the brush is used
-    {                                               // if the person was not pooping this indicates they are just cleaning
-      if (!pooping)
-        cleaning = true;
+    if (abs(distance - getDefaultDistance()) > 5 && !pooping)   // defeault distance can be set in menu, when this is not the default, the brush is used
+    {                                                           // if the person was not pooping this indicates they are just cleaning
+      cleaning = true;
     }
 
     if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
@@ -164,8 +147,6 @@ void loop() {
       active = false;
     }
   }
-
-
 }
 
 
