@@ -30,7 +30,7 @@
 
 #define tempPin A1
 
-#define magnetPin 12
+#define magnetPin A2
 
 #define interruptPin digitalPinToInterrupt(2)
 
@@ -44,7 +44,7 @@
 #define fireButtonPin 3 
 
 #define menuUpPin A2
-#define menuConfirmPin A3
+#define menuConfirmPin A2
 
 #define menuCount 2
 
@@ -58,6 +58,7 @@ EventQueue queue; // gebruikt default constructor
 
 Button menuUpButton;
 Button menuConfirmButton;
+Button magnetSensor;
 int drawSpeed = 1000;
 int magnet = HIGH;
 bool settings = false;
@@ -71,6 +72,11 @@ bool firing = false;
 int menu = 0;
 int heartBeat = LOW;
 int menuItem = 0;
+
+bool pooping = false;
+bool peeing = false;
+bool cleaning = false;
+int lastMotionTime = 0;
 
 void setup() {
   ENABLELOGGING;
@@ -88,15 +94,15 @@ void setup() {
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
   queue.Enqueue(new Event(UpdateTemp,0));
-  menuConfirmButton.Init(menuConfirmPin);
-  menuUpButton.Init(menuUpPin);
-
+  menuUpButton.Init(menuUpPin, 1);
+  menuConfirmButton.Init(menuConfirmPin, 2);
+  magnetSensor.Init(magnetPin, 3);
   lcd.begin(16, 2);
 }
 
 void loop() {
   queue.PerformEvents();
-  if(active && !settings){
+  /*if(active && !settings){
     
     if(distance < MinDistance && light < MinLight){
       unsigned long sprayDelay = GetDelay();
@@ -110,7 +116,7 @@ void loop() {
   }
   if(!settings && menuUpButton.GetDown()){
     MenuUp();
-  }
+  }*/
 #ifdef DEBUG
   if(active){
     digitalWrite(fireStatePin,HIGH);
@@ -120,6 +126,43 @@ void loop() {
   }
 #endif
 
+  if (active && !settings)
+  {
+    if (magnetSensor.GetDown()) // magnet sensor is placed on the big flush button in the toilet, which is the indicator that someone did a number two
+    {
+      cleaning = false;
+      pooping = true;
+      LOGLN("SOMEBODY IS POOPING");
+    }
+    
+    if (abs(distance - getDefaultDistance()) > 5)   // defeault distance can be set in menu, when this is not the default, the brush is used
+    {                                               // if the person was not pooping this indicates they are just cleaning
+      if (!pooping)
+        cleaning = true;
+    }
+
+    if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
+    {                                                   // the airwick will fire or not depending on the activity
+      if (pooping)
+      {
+        AirwickFireTwice();
+        LOGLN("FIRE BECAUSE POOPING");
+        pooping = false;
+      }
+      else if (cleaning)
+      {
+        LOGLN("NO FIRE BECAUSE CLEANING");
+        cleaning = false;
+      }
+      else
+      {
+        AirwickFire();
+        LOGLN("FIRE BECAUSE PEEING");
+        peeing = false;
+      }
+      active = false;
+    }
+  }
 
 
 }
@@ -140,7 +183,7 @@ void UpdateDistance(){
   delayMicroseconds(10);
   digitalWrite(trigPin,LOW);
   duration = pulseIn(echoPin,HIGH);
-  distance = duration / 66;
+  distance = duration / 68;
   LOG(F("Distance: "));
   LOGLN(distance);
   if(active)
@@ -199,6 +242,12 @@ void InterruptRoutine(){
   LOGLN(F("interrupt"));
   queue.Enqueue(new Event(UpdateDistance,0));
   queue.Enqueue(new Event(UpdateLight,0));
+<<<<<<< HEAD
+=======
+  queue.Enqueue(new Event(UpdateTemp,0));
+
+  lastMotionTime = millis();
+>>>>>>> 4f76fc7b79f58461c1f0a52aacc5bf26b099a014
 }
 
 //Enables interrupts if disabled
@@ -268,28 +317,32 @@ void DisplayMenu(){
   else {
     defaultMenu();
     drawSpeed = 250;
-    lastAction = millis() + returnToMenuTimer;
+    lastAction = millis();// + returnToMenuTimer;
   }
-
 }
 
 void defaultMenu(){
   lcd.print("Temp: ");
   lcd.print(temperature);
-  lcd.print("C      ");
+  lcd.print("C         ");
   lcd.setCursor(0, 1);
   lcd.print("Shots: ");
   lcd.print(GetShots());
-  lcd.print("       ");
+  lcd.print("          ");
 }
 
 bool printed = false;
 
 void previewSettingsMenu(){
-  lcd.print("Settings       ");
-  lcd.setCursor(0,1);
-  lcd.print("               ");
-
+  if (!printed)
+  {
+    LOGLN("PREVIEW SETTINGS");
+    lcd.print("Settings        ");
+    lcd.setCursor(0,1);
+    lcd.print("                ");
+    printed = true;
+  }
+  CheckTimer();
   if(menuConfirmButton.GetDown()){
     menu = 2;
     settings = true;
@@ -322,9 +375,9 @@ void settingsMenu(){
   if(menuItem == 0){
     if(!printed){
       LOGLN("DELAY");
-      lcd.print("Change delay   ");
+      lcd.print("Change delay    ");
       lcd.setCursor(0,1);
-      lcd.print("               ");
+      lcd.print("                ");
       printed = true;
     }
     CheckTimer();
@@ -341,7 +394,7 @@ void settingsMenu(){
   else if(menuItem == 1){
     LOGLN("NEWDELAY");
     if(!printed){
-      lcd.print("New delay:     ");
+      lcd.print("New delay:      ");
       printed = true;
     }
     CheckTimer();
@@ -354,7 +407,7 @@ void settingsMenu(){
       ResetMenuTimer();
     }
     lcd.print(delay);
-    lcd.print("s            ");
+    lcd.print("s             ");
 
     if (menuConfirmButton.GetDown())
     {
@@ -365,9 +418,9 @@ void settingsMenu(){
   else if (menuItem == 2){
     if(!printed){
       LOGLN("RESET SPRAYS");
-      lcd.print("Reset sprays   ");
+      lcd.print("Reset sprays    ");
       lcd.setCursor(0,1);
-      lcd.print("               ");
+      lcd.print("                ");
       printed = true;
     }
     CheckTimer();
@@ -386,14 +439,14 @@ void settingsMenu(){
       LOGLN("CONFIRM");
       lcd.print("Confirm?        ");
       lcd.setCursor(0,1);
-      lcd.print("               ");
+      lcd.print("                ");
       printed = true;
     }
     CheckTimer();
     if (menuConfirmButton.GetDown())
     {
       WriteShots(2400);
-      menuItem = 2;
+      menuItem = 4;
       ResetMenuTimer();
     }
     if (menuUpButton.GetDown())
@@ -405,7 +458,9 @@ void settingsMenu(){
   else if (menuItem == 4){
     if(!printed){
       LOGLN("RESETTED");
-      lcd.print("Sprays have been reset");
+      lcd.print("Sprays have     ");
+      lcd.setCursor(0,1);
+      lcd.print("been reset      ");
       printed = true;
     }
     CheckTimer();
@@ -414,12 +469,76 @@ void settingsMenu(){
       ResetMenuTimer();
     }
   }
+  else if (menuItem == 5)
+  {
+    if (!printed)
+    {
+      LOGLN("Set default distance");
+      lcd.print("Reset distance  ");
+      lcd.setCursor(0,1);
+      lcd.print("                ");
+      printed = true;
+    }
+    CheckTimer();
+    if (menuConfirmButton.GetDown())
+    {
+      menuItem = 6;
+      ResetMenuTimer();
+    }
+    if (menuUpButton.GetDown())
+    {
+      menuItem = 8;
+      ResetMenuTimer();
+    }
+  }
+  else if (menuItem == 6)
+  {
+    if (!printed)
+    {
+      LOGLN("CONFIRM DISTANCE");
+      lcd.print("Confirm?        ");
+      lcd.setCursor(0,1);
+      lcd.print("                ");
+      printed = true;
+    }
+    CheckTimer();
+    if (menuConfirmButton.GetDown())
+    {
+      setDefaultDistance();
+      menuItem = 7;
+      ResetMenuTimer();
+    }
+    if (menuUpButton.GetDown())
+    {
+      menuItem = 5;
+      ResetMenuTimer();
+    }
+    
+  }
+  else if (menuItem == 7)
+  {
+    if (!printed)
+    {
+      LOGLN("DISTANCE RESET");
+      lcd.print("Default distance");
+      lcd.setCursor(0,1);
+      lcd.print("set             ");
+      printed = true;
+    }
+    CheckTimer();
+    if (menuConfirmButton.GetDown() || menuUpButton.GetDown())
+    {
+      menuItem = 5;
+      ResetMenuTimer();
+    }
+  }
   else{
     if(!printed){
       LOGLN("BACK");
-      lcd.print("Back           ");
+      lcd.print("Back            ");
       lcd.setCursor(0,1);
-      lcd.print("               ");
+      lcd.print("                ");
+      printed = true;
     }
     CheckTimer();
     if(menuConfirmButton.GetDown()){
@@ -444,4 +563,13 @@ void CheckTimer(){
     menu = 0;
     printed = false;
   }
+}
+
+void setDefaultDistance(){
+  UpdateDistance();
+  EEPROM.write(3, distance);
+}
+
+int getDefaultDistance(){
+  return EEPROM.read(3);
 }
