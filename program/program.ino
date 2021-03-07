@@ -27,12 +27,13 @@
 #define trigPin 10
 #define echoPin 11
 #define LightSensorPin A0
+#define motionPin 2
 
 #define tempPin A1
 
 #define magnetPin A2
 
-#define interruptPin digitalPinToInterrupt(2)
+#define interruptPin digitalPinToInterrupt(motionPin)
 
 #define AirwickFireTime 16000
 #define MinLight 600
@@ -58,7 +59,6 @@ EventQueue queue; // gebruikt default constructor
 
 Button menuUpButton;
 Button menuConfirmButton;
-Button magnetSensor;
 int drawSpeed = 1000;
 int magnet = HIGH;
 bool settings = false;
@@ -74,30 +74,30 @@ int heartBeat = LOW;
 int menuItem = 0;
 
 bool pooping = false;
-bool peeing = false;
 bool cleaning = false;
+int peeing = false;
 int lastMotionTime = 0;
 
 void setup() {
   ENABLELOGGING;
-  pinMode(airwick,OUTPUT);
-  pinMode(3,INPUT);
-  attachInterrupt(interruptPin,InterruptRoutine,FALLING);
-  attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+  pinMode(airwick, OUTPUT);
+  pinMode(2, INPUT);
+  pinMode(3, INPUT);
+  attachInterrupt(interruptPin, InterruptRoutine, FALLING);
+  attachInterrupt(fireButtonPin, AirwickFireInterrupt, FALLING);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
-  pinMode(fireStatePin,OUTPUT);
-  pinMode(heartBeatPin,OUTPUT);
+  pinMode(fireStatePin, OUTPUT);
+  pinMode(heartBeatPin, OUTPUT);
   pinMode(fireButtonPin, INPUT);
-  pinMode(magnetPin,INPUT);
-  pinMode(tempPin,INPUT);
+  pinMode(magnetPin, INPUT);
+  pinMode(tempPin, INPUT);
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
   queue.Enqueue(new Event(UpdateTemp,0));
   menuUpButton.Init(menuUpPin, 1);
   menuConfirmButton.Init(menuConfirmPin, 2);
-  magnetSensor.Init(magnetPin, 3);
   lcd.begin(16, 2);
 }
 
@@ -114,35 +114,44 @@ void loop() {
 
   if (active && !settings)
   {
-    if (magnetSensor.GetDown() && !cleaning) // magnet sensor is placed on the big flush button in the toilet, which is the indicator that someone did a number two
+    if (CheckMagnet() && !cleaning) // magnet sensor is placed on the flush button in the toilet, which is the indicator that someone went to the toilet
     {
       pooping = true;
+      peeing = true;
       LOGLN("SOMEBODY IS POOPING");
     }
     
-    if (abs(distance - getDefaultDistance()) > 5 && !pooping)   // defeault distance can be set in menu, when this is not the default, the brush is used
-    {                                                           // if the person was not pooping this indicates they are just cleaning
-      cleaning = true;
+    if (abs(distance - getDefaultDistance()) > 5)   // defeault distance can be set in menu, when this is not the default, the brush is used
+    {              
+      if (!pooping)   // if the person was not flushing before using the brush, this indicates they are just cleaning
+      {                                             
+        cleaning = true;
+        LOGLN("");
+      }
+      else            // if the person has flushed and used the brush, this indicates they did a number two
+      {
+        peeing = false;
+        cleaning = false;
+      }
     }
-
+    CheckMotion();
     if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
     {                                                   // the airwick will fire or not depending on the activity
-      if (pooping)
+      if (peeing)
+      {
+        AirwickFire();
+        LOGLN("FIRE BECAUSE PEEING");
+      }                                            
+      else if (pooping)
       {
         AirwickFireTwice();
         LOGLN("FIRE BECAUSE POOPING");
         pooping = false;
       }
-      else if (cleaning)
+      else            // this is also when someone just walks in and out and doesn't interact with the sensors
       {
         LOGLN("NO FIRE BECAUSE CLEANING");
         cleaning = false;
-      }
-      else
-      {
-        AirwickFire();
-        LOGLN("FIRE BECAUSE PEEING");
-        peeing = false;
       }
       active = false;
     }
@@ -561,4 +570,26 @@ void setDefaultDistance(){
 
 int getDefaultDistance(){
   return EEPROM.read(3);
+}
+
+void CheckMotion(){
+  int motion = digitalRead(motionPin);
+  if (motion == HIGH)
+  {
+    lastMotionTime = millis();
+  }
+}
+
+bool CheckMagnet(){
+  int value = analogRead(magnetPin);
+  if (value < 700)
+  {
+    return false;
+  }
+  else
+  {
+    return true;
+  }
+  
+  
 }
