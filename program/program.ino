@@ -28,7 +28,7 @@
 #define echoPin 11
 #define LightSensorPin A0
 
-#define tempPin 3
+#define tempPin A1
 
 #define magnetPin 12
 
@@ -41,7 +41,7 @@
 #define fireStatePin A4
 #define heartBeatPin A5
 
-#define fireButtonPin A1 
+#define fireButtonPin 3 
 
 #define menuUpPin A2
 #define menuConfirmPin A3
@@ -66,7 +66,7 @@ int distance = MinDistance;
 long duration;
 int light = MinLight;
 float temperature;
-bool poop;
+bool poopm = false;
 bool firing = false;
 int menu = 0;
 int heartBeat = LOW;
@@ -99,11 +99,13 @@ void loop() {
   if(active && !settings){
     
     if(distance < MinDistance && light < MinLight){
-      queue.Enqueue(new Event(AirwickFire,EEPROM.read(2) * 1000 - 10000));
+      unsigned long sprayDelay = GetDelay();
+      //queue.Enqueue(new Event(AirwickFire,sprayDelay * 1000 - AirwickFireTime));
       active = false;
     }
+    
     if(digitalRead(fireButtonPin) == LOW){
-      AirwickFireTwice();
+      //AirwickFireTwice();
     }
   }
   if(!settings && menuUpButton.GetDown()){
@@ -197,7 +199,6 @@ void InterruptRoutine(){
   LOGLN(F("interrupt"));
   queue.Enqueue(new Event(UpdateDistance,0));
   queue.Enqueue(new Event(UpdateLight,0));
-  queue.Enqueue(new Event(UpdateTemp,0));
 }
 
 //Enables interrupts if disabled
@@ -242,6 +243,9 @@ void UpdateTemp(){
 
 void UpdateMagnet(){
   magnet = digitalRead(magnetPin);
+  LOG(F("Magnet: "));
+  LOGLN(magnet);
+  if(active) queue.Enqueue(new Event(UpdateMagnet, 200));
 }
 
 void MenuUp(){
