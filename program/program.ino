@@ -218,7 +218,7 @@ void AirwickFireInterrupt(){
 // Enables the fire interrupt again
 void EnableFireInterrupt(){
   EIFR = (1 << 0); // Clears the interrupt flag
-  attachInterrupt(interruptPin,InterruptRoutine,FALLING);
+  attachInterrupt(interruptPin,AirwickFireInterrupt,FALLING);
 }
 
 //Fires the airwick once
