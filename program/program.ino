@@ -1,9 +1,11 @@
-#define DEBUG_MENU
+#define DEBUG
 
 #ifdef DEBUG 
   #define LOG(x) Serial.print(x)
   #define LOGLN(x) Serial.println(x)
   #define ENABLELOGGING Serial.begin(115200)
+  #define LOGMENU(x)
+  #define LOGLNMENU(x) 
 #else
   #define LOG(x)
   #define LOGLN(x)
@@ -91,6 +93,7 @@ bool printed = false;
 void setup() {
   ENABLELOGGING;
   pinMode(airwick,OUTPUT);
+  digitalWrite(airwick,LOW);
   pinMode(2,INPUT); //Motion sensor interrupt pin
   pinMode(3,INPUT); //Button interrupt pin
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
@@ -109,6 +112,7 @@ void setup() {
   menuUpButton.Init(menuUpPin, 1);
   menuConfirmButton.Init(menuConfirmPin, 2);
   lcd.begin(16, 2);
+  
 }
 
 void loop() {
@@ -210,9 +214,13 @@ void AirwickFireTwice(){
 // Fires the airwick via an interrupt button and disables the interrupt for
 // 20 seconsds
 void AirwickFireInterrupt(){
-  detachInterrupt(fireButtonPin);
-  queue.Enqueue(new Event(EnableFireInterrupt,20000));
-  AirwickFire();
+  if(digitalRead(3) == LOW){
+    LOGLN(F("INTERRUPTFIRE"));
+    detachInterrupt(fireButtonPin);
+    queue.Enqueue(new Event(EnableFireInterrupt,20000));
+    AirwickFire();
+  }
+
 }
 
 // Enables the fire interrupt again
