@@ -39,6 +39,9 @@
 #define fireStatePin A4
 #define heartBeatPin A5
 
+#define lcdScreenPin A3
+
+
 #define fireButtonPin digitalPinToInterrupt(3) 
 
 #define magnetPin A2
@@ -80,19 +83,11 @@ unsigned long lastAction = returnToMenuTimer;
 
 void setup() {
   ENABLELOGGING;
-<<<<<<< HEAD
   pinMode(airwick,OUTPUT);
   pinMode(2,INPUT); //Motion sensor interrupt pin
   pinMode(3,INPUT); //Button interrupt pin
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
   attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
-=======
-  pinMode(airwick, OUTPUT);
-  pinMode(2, INPUT); //Motion sensor interrupt pin
-  pinMode(3, INPUT); //Button interrupt pin
-  attachInterrupt(interruptPin, InterruptRoutine, FALLING);
-  //attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
->>>>>>> e91cba3e7397f99555357f61416709b3ee596318
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
@@ -100,6 +95,7 @@ void setup() {
   pinMode(heartBeatPin, OUTPUT);
   pinMode(fireButtonPin, INPUT);
   pinMode(tempPin, INPUT);
+  pinMode(lcdScreenPin, OUTPUT);
   queue.Enqueue(new Event(UpdateBeat,0));
   queue.Enqueue(new Event(DisplayMenu,0));
   queue.Enqueue(new Event(UpdateTemp,0));
@@ -110,17 +106,12 @@ void setup() {
 
 void loop() {
   queue.PerformEvents();
-#ifdef DEBUG
   if(active){
-    digitalWrite(fireStatePin,HIGH);
+    digitalWrite(lcdScreenPin,HIGH);
   }
   else{
-    digitalWrite(fireStatePin,LOW);
+    digitalWrite(lcdScreenPin,LOW);
   }
-#endif
-
-  int value = analogRead(A2);
-  LOGLN(value);
   if (active && !settings)
   {
     if (toiletButtonPress && !cleaning) // magnet sensor is placed on the flush button in the toilet, which is the indicator that someone went to the toilet
@@ -234,9 +225,7 @@ void FireRoutine(){
   active = false;  
   firing = true;
   digitalWrite(airwick,HIGH);
-#ifndef DEBUG
   digitalWrite(fireStatePin,HIGH);
-#endif
   queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
 }
 
@@ -253,9 +242,7 @@ void AirwickOff(){
   WriteShots(shots);
   firing = false;
   digitalWrite(airwick,LOW);
-#ifndef DEBUG
   digitalWrite(fireStatePin,LOW);
-#endif
   EnableInterrupt();
   LOGLN(F("Reload"));
 }
