@@ -80,11 +80,19 @@ unsigned long lastAction = returnToMenuTimer;
 
 void setup() {
   ENABLELOGGING;
+<<<<<<< HEAD
   pinMode(airwick,OUTPUT);
   pinMode(2,INPUT); //Motion sensor interrupt pin
   pinMode(3,INPUT); //Button interrupt pin
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
   attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+=======
+  pinMode(airwick, OUTPUT);
+  pinMode(2, INPUT); //Motion sensor interrupt pin
+  pinMode(3, INPUT); //Button interrupt pin
+  attachInterrupt(interruptPin, InterruptRoutine, FALLING);
+  //attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+>>>>>>> e91cba3e7397f99555357f61416709b3ee596318
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
@@ -111,13 +119,15 @@ void loop() {
   }
 #endif
 
+  int value = analogRead(A2);
+  LOGLN(value);
   if (active && !settings)
   {
     if (toiletButtonPress && !cleaning) // magnet sensor is placed on the flush button in the toilet, which is the indicator that someone went to the toilet
     {
       pooping = true;
       peeing = true;
-      LOGLN("SOMEBODY IS POOPING");
+      LOGLN("SOMEBODY IS FLUSHING");
     }
     
     if (abs(distance - getDefaultDistance()) > 5)   // defeault distance can be set in menu, when this is not the default, the brush is used
@@ -138,6 +148,8 @@ void loop() {
       {
         AirwickFire();
         LOGLN("FIRE BECAUSE PEEING");
+        peeing = false;
+        pooping = false;
       }                                            
       else if (pooping)
       {
@@ -265,7 +277,7 @@ void EnableInterrupt(){
   light = MinLight;
   distance = MinDistance;
   EIFR = (1 << 0); // Clears the interrupt flag
-  attachInterrupt(interruptPin,InterruptRoutine,FALLING);
+  attachInterrupt(interruptPin, InterruptRoutine, FALLING);
 }
 
 //Gets the light from the light sensor
@@ -323,7 +335,7 @@ void DisplayMenu(){
   else {
     defaultMenu();
     drawSpeed = 250;
-    lastAction = millis();// + returnToMenuTimer;
+    lastAction = millis();
   }
 }
 
