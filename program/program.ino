@@ -84,7 +84,7 @@ void setup() {
   pinMode(2,INPUT); //Motion sensor interrupt pin
   pinMode(3,INPUT); //Button interrupt pin
   attachInterrupt(interruptPin,InterruptRoutine,FALLING);
-  //attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+  attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
@@ -147,11 +147,15 @@ void loop() {
       }
       else            // this is also when someone just walks in and out and doesn't interact with the sensors
       {
+        NoFire();
         LOGLN("NO FIRE BECAUSE CLEANING");
         cleaning = false;
       }
       active = false;
     }
+  }
+  if(menuUpButton.GetDown() && !settings){
+    MenuUp();
   }
 }
 
@@ -222,6 +226,12 @@ void FireRoutine(){
   digitalWrite(fireStatePin,HIGH);
 #endif
   queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
+}
+
+void NoFire(){
+  active = false;
+  firing = false;
+  EnableInterrupt();
 }
 
 //Disables the airwick
@@ -350,11 +360,11 @@ void previewSettingsMenu(){
 }
 
 // Gets the current spray delay from EEPROM
-int GetDelay(){
+unsigned int GetDelay(){
   return EEPROM.read(2);
 }
 // Writes the current spray delay to EEPROM
-void WriteDelay(int delay){
+void WriteDelay(unsigned int delay){
   EEPROM.write(2, delay);
 }
 
