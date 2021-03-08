@@ -1,15 +1,14 @@
-#define DEBUG
-
+#define RELEASE
+#define LOG(x)
+#define LOGLN(x)
+#define ENABLELOGGING
+#define LOGMENU(x)
+#define LOGLNMENU(x)
 #ifdef DEBUG 
   #define LOG(x) Serial.print(x)
   #define LOGLN(x) Serial.println(x)
   #define ENABLELOGGING Serial.begin(115200)
-  #define LOGMENU(x)
-  #define LOGLNMENU(x) 
 #else
-  #define LOG(x)
-  #define LOGLN(x)
-  #define ENABLELOGGING
 #ifdef DEBUG_MENU
   #define LOGMENU(x) Serial.print(x)
   #define LOGLNMENU(x) Serial.println(x)
@@ -83,6 +82,8 @@ int heartBeat = LOW;
 int menuItem = 0;
 bool toiletButtonPress = false;
 
+bool interruptEnabled = true;
+bool fireInterruptEnabled = true;
 bool pooping = false;
 bool cleaning = false;
 int peeing = false;
@@ -171,7 +172,12 @@ void loop() {
   }
   if(!settings && menuUpButton.GetDown()){
     MenuUp();
-
+  }
+  if(!active && !interruptEnabled){
+    EnableInterrupt();
+  }
+  if(!firing && !fireInterruptEnabled){
+    EnableFireInterrupt();
   }
 }
 
@@ -217,16 +223,16 @@ void AirwickFireInterrupt(){
   if(digitalRead(3) == LOW){
     LOGLN(F("INTERRUPTFIRE"));
     detachInterrupt(fireButtonPin);
-    queue.Enqueue(new Event(EnableFireInterrupt,20000));
     AirwickFire();
+    fireInterruptEnabled = false;
   }
 
 }
 
 // Enables the fire interrupt again
 void EnableFireInterrupt(){
-  EIFR = (1 << 0); // Clears the interrupt flag
-  attachInterrupt(interruptPin,AirwickFireInterrupt,FALLING);
+  attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+  fireInterruptEnabled = true;
 }
 
 //Fires the airwick once
@@ -249,7 +255,6 @@ void FireRoutine(){
 void NoFire(){
   active = false;
   firing = false;
-  EnableInterrupt();
 }
 
 //Disables the airwick
@@ -260,7 +265,6 @@ void AirwickOff(){
   firing = false;
   digitalWrite(airwick,LOW);
   digitalWrite(fireStatePin,LOW);
-  EnableInterrupt();
   LOGLN(F("Reload"));
 }
 
@@ -274,12 +278,14 @@ void InterruptRoutine(){
   queue.Enqueue(new Event(CheckMagnet,0));
   queue.Enqueue(new Event(CheckMotion,0));
   lastMotionTime = millis();
+  interruptEnabled = false;
 }
 
 //Enables enables the motion sensor interruupt
 void EnableInterrupt(){
   light = MinLight;
   distance = MinDistance;
+  interruptEnabled = true;
   EIFR = (1 << 0); // Clears the interrupt flag
   attachInterrupt(interruptPin, InterruptRoutine, FALLING);
 }

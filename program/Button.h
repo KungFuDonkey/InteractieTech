@@ -1,14 +1,16 @@
 #include "Arduino.h"
 
+#define debounceMS 20
+
 class Button {
 public:
   int pin;
   int buttonID; 
-
-  int lastSteadyValue = 1023;
+  unsigned long lastSteadyTime;
   int lowerBound;
   int upperBound;
   bool pressed = false;
+  bool pressedonce = false;
 
   Button() {
     pin = 0;
@@ -25,15 +27,24 @@ public:
   // Gets if a button is down
   bool GetDown(){
     int value = analogRead(pin);
-    if (value > lowerBound && value < upperBound && !pressed)
+    if (value > lowerBound && value < upperBound)
     {
-      Serial.println("BUTTON WAS PRESSED");
-      pressed = true;
-      return true;
+      if(pressed && pressedonce && lastSteadyTime - millis() > debounceMS){
+        Serial.println("BUTTON WAS PRESSED");
+        pressedonce = false;
+        return true;
+      }
+      else if(!pressed) {
+        lastSteadyTime = millis();
+        pressed = true;
+        pressedonce = true;
+      }
+
     }
-    else if (pressed && (value < lowerBound || value > upperBound))
+    else
     {
       pressed = false;
+      pressedonce = false;
     }
     
     return false;
