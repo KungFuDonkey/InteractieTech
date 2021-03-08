@@ -444,7 +444,7 @@ void settingsMenu(){
 
     if (menuConfirmButton.GetDown())
     {
-      menuItem = 1;
+      menuItem = 0;
       ResetMenuTimer();
     }
   }
