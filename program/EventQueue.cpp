@@ -11,6 +11,11 @@ EventQueue::EventQueue()
 /// Enqueue an event into the queue
 void EventQueue::Enqueue(Event *e)
 {
+#ifndef RELEASE
+  if(Count == QueSize){
+    Serial.print("WARNING QUEUE IS FULL");
+  }
+#endif
   CheckMillis();
   queue[Count] = e;
   Count++;

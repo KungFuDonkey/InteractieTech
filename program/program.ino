@@ -1,12 +1,4 @@
-#include "EventQueue.h"
-#include "DallasTemperature.h"
-#include "OneWire.h"
-#include "Button.h"
-#include <LiquidCrystal.h>
-#include "EEPROM.h"
-#include "stdint.h"
-
-#define DEBUG
+#define DEBUG_MENU
 
 #ifdef DEBUG 
   #define LOG(x) Serial.print(x)
@@ -16,7 +8,21 @@
   #define LOG(x)
   #define LOGLN(x)
   #define ENABLELOGGING
+#ifdef DEBUG_MENU
+  #define LOGMENU(x) Serial.print(x)
+  #define LOGLNMENU(x) Serial.println(x)
+  #define ENABLELOGGING Serial.begin(115200)
 #endif
+#endif
+#include "EventQueue.h"
+#include "DallasTemperature.h"
+#include "OneWire.h"
+#include "Button.h"
+#include <LiquidCrystal.h>
+#include "EEPROM.h"
+#include "stdint.h"
+
+
 
 #define returnToMenuTimer 10000
 
@@ -80,6 +86,7 @@ bool cleaning = false;
 int peeing = false;
 unsigned long lastMotionTime = 0;
 unsigned long lastAction = returnToMenuTimer;
+bool printed = false;
 
 void setup() {
   ENABLELOGGING;
@@ -134,15 +141,7 @@ void loop() {
       }
     }
 
-    LOG(millis());
-    LOG("-");
-    LOG(lastMotionTime);
-    LOG(">");
-    LOGLN(GetDelay());
-    LOGLN(millis() - lastMotionTime);
-    LOGLN(millis() - lastMotionTime > GetDelay());
-
-    if (millis() - lastMotionTime > GetDelay())  // when no motion is sensed for a configurable delay
+    if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
     {                                                   // the airwick will fire or not depending on the activity
       if (peeing)
       {
@@ -166,8 +165,9 @@ void loop() {
       active = false;
     }
   }
-  if(menuUpButton.GetDown() && !settings){
+  if(!settings && menuUpButton.GetDown()){
     MenuUp();
+
   }
 }
 
@@ -312,17 +312,22 @@ void UpdateTemp(){
 // Switches the menu status
 void MenuUp(){
   menu = menu + 1 >= menuCount ? 0 : menu + 1;
+  lastAction = millis();
+  printed = false;
+  LOGMENU("MENUUP: ");
+  LOGLNMENU(menu);
+  LOGLNMENU(printed);
 }
 
 
 // Prints the current menu to the lcd screen
 void DisplayMenu(){
+
   queue.Enqueue(new Event(DisplayMenu,drawSpeed));
   lcd.setCursor(0,0);
   if (menu == 1){
     previewSettingsMenu();
     drawSpeed = 50;
-    CheckTimer();
   }
   else if (menu == 2){
     settingsMenu();
@@ -331,12 +336,14 @@ void DisplayMenu(){
   else {
     defaultMenu();
     drawSpeed = 250;
-    lastAction = millis();
   }
 }
 
 // The default menu template
 void defaultMenu(){
+  LOGMENU("Menu: ");
+  LOGLNMENU(menu);
+  LOGLNMENU("DEFAULT MENU");
   lcd.print("Temp: ");
   lcd.print(temperature);
   lcd.print("C         ");
@@ -346,13 +353,15 @@ void defaultMenu(){
   lcd.print("          ");
 }
 
-bool printed = false;
+
 
 // The menu before the settings template
 void previewSettingsMenu(){
   if (!printed)
   {
-    LOGLN("PREVIEW SETTINGS");
+    LOGMENU("Menu: ");
+    LOGLNMENU(menu);
+    LOGLNMENU("PREVIEW SETTINGS");
     lcd.print("Settings        ");
     lcd.setCursor(0,1);
     lcd.print("                ");
@@ -370,7 +379,7 @@ void previewSettingsMenu(){
 // Gets the current spray delay from EEPROM
 unsigned long GetDelay(){
   unsigned long value = (unsigned long)EEPROM.read(2);
-  return value * 1000;
+  return value;
 }
 // Writes the current spray delay to EEPROM
 void WriteDelay(unsigned int delay){
@@ -396,32 +405,34 @@ void settingsMenu(){
   lcd.setCursor(0,0);
   if(menuItem == 0){
     if(!printed){
-      LOGLN("DELAY");
+      LOGLNMENU("DELAY");
       lcd.print("Change delay    ");
       lcd.setCursor(0,1);
       lcd.print("                ");
       printed = true;
     }
-    CheckTimer();
-    if (menuConfirmButton.GetDown())
+    bool confirm = menuConfirmButton.GetDown();
+    bool up = menuUpButton.GetDown(); 
+    if (confirm)
     {
       menuItem = 1;
       ResetMenuTimer();
     }
-    if (menuUpButton.GetDown()){
+    else if (up){
       menuItem = 2;
       ResetMenuTimer();
     }
+    CheckTimer();
   }
   else if(menuItem == 1){
-    LOGLN("NEWDELAY");
+    LOGLNMENU("NEWDELAY");
     if(!printed){
       lcd.print("New delay:      ");
       printed = true;
     }
     CheckTimer();
     lcd.setCursor(0, 1);
-    int delay = GetDelay();
+    unsigned long delay = GetDelay();
     if (menuUpButton.GetDown())
     {
       delay = delay + 5 > 60 ? 15 : delay + 5;
@@ -433,13 +444,13 @@ void settingsMenu(){
 
     if (menuConfirmButton.GetDown())
     {
-      menuItem = 0;
+      menuItem = 1;
       ResetMenuTimer();
     }
   }
   else if (menuItem == 2){
     if(!printed){
-      LOGLN("RESET SPRAYS");
+      LOGLNMENU("RESET SPRAYS");
       lcd.print("Reset sprays    ");
       lcd.setCursor(0,1);
       lcd.print("                ");
@@ -458,7 +469,7 @@ void settingsMenu(){
   }
   else if (menuItem == 3){
     if(!printed){
-      LOGLN("CONFIRM");
+      LOGLNMENU("CONFIRM");
       lcd.print("Confirm?        ");
       lcd.setCursor(0,1);
       lcd.print("                ");
@@ -479,7 +490,7 @@ void settingsMenu(){
   }
   else if (menuItem == 4){
     if(!printed){
-      LOGLN("RESETTED");
+      LOGLNMENU("RESETTED");
       lcd.print("Sprays have     ");
       lcd.setCursor(0,1);
       lcd.print("been reset      ");
@@ -495,7 +506,7 @@ void settingsMenu(){
   {
     if (!printed)
     {
-      LOGLN("Set default distance");
+      LOGLNMENU("Set default distance");
       lcd.print("Reset distance  ");
       lcd.setCursor(0,1);
       lcd.print("                ");
@@ -517,7 +528,7 @@ void settingsMenu(){
   {
     if (!printed)
     {
-      LOGLN("CONFIRM DISTANCE");
+      LOGLNMENU("CONFIRM DISTANCE");
       lcd.print("Confirm?        ");
       lcd.setCursor(0,1);
       lcd.print("                ");
@@ -541,7 +552,7 @@ void settingsMenu(){
   {
     if (!printed)
     {
-      LOGLN("DISTANCE RESET");
+      LOGLNMENU("DISTANCE RESET");
       lcd.print("Default distance");
       lcd.setCursor(0,1);
       lcd.print("set             ");
@@ -556,7 +567,7 @@ void settingsMenu(){
   }
   else{
     if(!printed){
-      LOGLN("BACK");
+      LOGLNMENU("BACK");
       lcd.print("Back            ");
       lcd.setCursor(0,1);
       lcd.print("                ");

@@ -18,8 +18,8 @@ public:
     this->pin = pin;
     
     int estimateVolt = 1024 - (1024 / buttonID);
-    lowerBound = estimateVolt - 10;
-    upperBound = estimateVolt + 10;
+    lowerBound = estimateVolt - 50;
+    upperBound = estimateVolt + 50;
   }
 
   // Gets if a button is down
@@ -27,6 +27,7 @@ public:
     int value = analogRead(pin);
     if (value > lowerBound && value < upperBound && !pressed)
     {
+      Serial.println("BUTTON WAS PRESSED");
       pressed = true;
       return true;
     }
