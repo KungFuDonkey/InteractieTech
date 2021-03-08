@@ -78,7 +78,7 @@ bool toiletButtonPress = false;
 bool pooping = false;
 bool cleaning = false;
 int peeing = false;
-int lastMotionTime = 0;
+unsigned long lastMotionTime = 0;
 unsigned long lastAction = returnToMenuTimer;
 
 void setup() {
@@ -133,7 +133,16 @@ void loop() {
         cleaning = false;
       }
     }
-    if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
+
+    LOG(millis());
+    LOG("-");
+    LOG(lastMotionTime);
+    LOG(">");
+    LOGLN(GetDelay());
+    LOGLN(millis() - lastMotionTime);
+    LOGLN(millis() - lastMotionTime > GetDelay());
+
+    if (millis() - lastMotionTime > GetDelay())  // when no motion is sensed for a configurable delay
     {                                                   // the airwick will fire or not depending on the activity
       if (peeing)
       {
@@ -359,8 +368,9 @@ void previewSettingsMenu(){
 }
 
 // Gets the current spray delay from EEPROM
-unsigned int GetDelay(){
-  return EEPROM.read(2);
+unsigned long GetDelay(){
+  unsigned long value = (unsigned long)EEPROM.read(2);
+  return value * 1000;
 }
 // Writes the current spray delay to EEPROM
 void WriteDelay(unsigned int delay){
