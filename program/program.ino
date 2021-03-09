@@ -179,8 +179,6 @@ void loop() {
   }
 }
 
-
-
 // delayMicroseconds was used here
 // this was done for the implementation of the sonar
 // this code only blocks for 12 microseconds while the library
@@ -213,7 +211,6 @@ void AirwickFireInterrupt(){
     AirwickFire(1);
     fireInterruptEnabled = false;
   }
-
 }
 
 // Enables the fire interrupt again
@@ -281,20 +278,17 @@ void EnableInterrupt(){
   light = MinLight;
   distance = MinDistance;
   interruptEnabled = true;
-  EIFR = (1 << 0); // Clears the interrupt flag
+  EIFR = (1 << 0);                                                             // Clears the interrupt flag
   attachInterrupt(interruptPin, InterruptRoutine, FALLING);
 }
 
 //Gets the light from the light sensor
 void UpdateLight(){
   light = analogRead(LightSensorPin);
-  
-  if(active){
-    queue.Enqueue(new Event(UpdateLight, 1000));
-  }
-  
   LOG(F("Light: "));
   LOGLN(light);
+
+  if(active) queue.Enqueue(new Event(UpdateLight, 1000));
 }
 
 //Turns the beat led on or off
@@ -328,6 +322,10 @@ void MenuUp(){
   LOGLNMENU(printed);
 }
 
+// Cycles through viewing temp en shots or action on the default menu
+void DefaultMenuUp(){
+  menuDefault = menuDefault + 1 > 1 ? 0 : menuDefault + 1;
+}
 
 // Prints the current menu to the lcd screen
 void DisplayMenu(){
@@ -386,10 +384,6 @@ void defaultMenu(int mode){
     else lcd.print("        ");
     LOGLNMENU("DEFAULT MENU 2")
   }
-}
-
-void DefaultMenuUp(){
-  menuDefault = menuDefault + 1 > 1 ? 0 : menuDefault + 1;
 }
 
 // The menu before the settings template
@@ -715,7 +709,6 @@ void ResetMenuTimer(){
   printed = false;
   lastAction = millis();
 }
-
 // Checks the menu timer to return to the default menu
 void CheckTimer(){
   if(millis() - lastAction > returnToMenuTimer){ 
@@ -730,7 +723,6 @@ void setDefaultDistance(){
   UpdateDistance();
   EEPROM.write(3, distance);
 }
-
 // Gets the default distance
 int getDefaultDistance(){
   return EEPROM.read(3);
@@ -745,21 +737,18 @@ void CheckMotion(){
   {
     lastMotionTime = millis();
   }
-
   if(active) queue.Enqueue(new Event(CheckMotion, 500));
 }
 
 // Check if the toilet is flushed
 void CheckMagnet(){
   int value = analogRead(magnetPin);
-
 #ifdef DEBUG
   if(toiletButtonPress != value >= 700){
     LOG(F("Magnet: "));
     LOGLN(toiletButtonPress);
   }
 #endif
-
   toiletButtonPress = value >= 700;
   if(active) queue.Enqueue(new Event(CheckMagnet, 200));
 }
@@ -775,7 +764,6 @@ void SetNumberOfSprays(int amount, int action){
     EEPROM.write(5, amount);
   }
 }
-
 // Gets number of spray for a number 1 or number 2
 int GetNumberOfSprays(int action){
   if (action == 1)
