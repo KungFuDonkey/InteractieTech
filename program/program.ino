@@ -24,7 +24,7 @@
 #include "stdint.h"
 
 #define motionPin 2
-#define fireButtonPin digitalPinToInterrupt(3) 
+#define firePin 3
 #define trigPin 10
 #define echoPin 11
 #define airwick 13
@@ -39,6 +39,7 @@
 #define heartBeatPin A5
 
 #define interruptPin digitalPinToInterrupt(motionPin)
+#define fireButtonPin digitalPinToInterrupt(firePin)
 
 #define returnToMenuTimer 10000
 #define AirwickFireTime 16200
@@ -52,7 +53,7 @@ DallasTemperature sensors(&oneWire);
 
 LiquidCrystal lcd(9, 8, 7, 6, 5, 4);
 
-EventQueue queue; // Uses default constructor
+EventQueue queue;                                                              // Uses default constructor
 
 Button menuUpButton;
 Button menuConfirmButton;
@@ -88,20 +89,21 @@ int peeing = false;
 
 void setup() {
   ENABLELOGGING;
-  pinMode(airwick, OUTPUT);
-  digitalWrite(airwick, LOW);
-  pinMode(2, INPUT); //Motion sensor interrupt pin
-  pinMode(3, INPUT); //Button interrupt pin
   attachInterrupt(interruptPin, InterruptRoutine, RISING);
   attachInterrupt(fireButtonPin, AirwickFireInterrupt, FALLING);
-  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+  pinMode(airwick, OUTPUT);
+  pinMode(motionPin, INPUT);
+  pinMode(firePin, INPUT);
+  pinMode(trigPin, OUTPUT);                                                    // Sets the trigPin as an Output
+  pinMode(echoPin, INPUT);                                                     // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
   pinMode(fireStatePin, OUTPUT);
   pinMode(heartBeatPin, OUTPUT);
   pinMode(fireButtonPin, INPUT);
   pinMode(tempPin, INPUT);
   pinMode(lcdScreenPin, OUTPUT);
+
+  digitalWrite(airwick, LOW);
   queue.Enqueue(new Event(UpdateBeat, 0));
   queue.Enqueue(new Event(DisplayMenu, 0));
   queue.Enqueue(new Event(UpdateTemp, 0));
@@ -117,21 +119,21 @@ void loop() {
 
   if (active && !settings)
   {
-    if (toiletButtonPress && !cleaning) // magnet sensor is placed on the flush button in the toilet, which is the indicator that someone went to the toilet
-    {
+    if (toiletButtonPress && !cleaning)                                        // magnet sensor is placed on the flush button in the toilet, which is the
+    {                                                                                                        // indicator that someone went to the toilet
       pooping = true;
       peeing = true;
       actionDone = 1;
       LOGLN("SOMEBODY IS FLUSHING");
     }
     
-    if (abs(distance - getDefaultDistance()) > 5)   // defeault distance can be set in menu, when this is not the default, the brush is used
+    if (abs(distance - getDefaultDistance()) > 5)                              // defeault distance can be set in menu, when this is not the default, the brush is used
     {              
-      if (!pooping)   // if the person was not flushing before using the brush, this indicates they are just cleaning
+      if (!pooping)                                                            // if the person was not flushing before using the brush, this indicates they are just cleaning
       {                                             
         cleaning = true;
       }
-      else            // if the person has flushed and used the brush, this indicates they did a number two
+      else                                                                     // if the person has flushed and used the brush, this indicates they did a number two
       {
         peeing = false;
         cleaning = false;
@@ -139,8 +141,8 @@ void loop() {
       actionDone = 2;
     }
 
-    if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
-    {                                                   // the airwick will fire or not depending on the activity
+    if (millis() - lastMotionTime > GetDelay() * 1000)                         // when no motion is sensed for a configurable delay
+    {                                                                          // the airwick will fire or not depending on the activity
       if (peeing)
       {
         AirwickFire(1);
@@ -154,7 +156,7 @@ void loop() {
         LOGLN("FIRE TWICE BECAUSE POOPING");
         pooping = false;
       }
-      else            // this is also when someone just walks in and out and doesn't interact with the sensors
+      else                                                                     // this is also when someone just walks in and out and doesn't interact with the sensors
       {
         NoFire();
         LOGLN("NO FIRE BECAUSE CLEANING");
@@ -163,6 +165,7 @@ void loop() {
       active = false;
     }
   }
+
   if (!settings && menuUpButton.GetDown()){
     MenuUp();
   }
