@@ -1,4 +1,4 @@
-#define RELEASE
+#define DEBUG
 #define LOG(x)
 #define LOGLN(x)
 #define ENABLELOGGING
@@ -80,7 +80,10 @@ bool firing = false;
 int menu = 0;
 int heartBeat = LOW;
 int menuItem = 0;
+int menuDefault = 0;
 bool toiletButtonPress = false;
+int actionDone = 0;
+int action = 1;
 
 bool interruptEnabled = true;
 bool fireInterruptEnabled = true;
@@ -93,12 +96,12 @@ bool printed = false;
 
 void setup() {
   ENABLELOGGING;
-  pinMode(airwick,OUTPUT);
-  digitalWrite(airwick,LOW);
-  pinMode(2,INPUT); //Motion sensor interrupt pin
-  pinMode(3,INPUT); //Button interrupt pin
-  attachInterrupt(interruptPin,InterruptRoutine,FALLING);
-  attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+  pinMode(airwick, OUTPUT);
+  digitalWrite(airwick, LOW);
+  pinMode(2, INPUT); //Motion sensor interrupt pin
+  pinMode(3, INPUT); //Button interrupt pin
+  attachInterrupt(interruptPin, InterruptRoutine, RISING);
+  attachInterrupt(fireButtonPin, AirwickFireInterrupt, FALLING);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   pinMode(LightSensorPin, INPUT);
@@ -107,22 +110,21 @@ void setup() {
   pinMode(fireButtonPin, INPUT);
   pinMode(tempPin, INPUT);
   pinMode(lcdScreenPin, OUTPUT);
-  queue.Enqueue(new Event(UpdateBeat,0));
-  queue.Enqueue(new Event(DisplayMenu,0));
-  queue.Enqueue(new Event(UpdateTemp,0));
+  queue.Enqueue(new Event(UpdateBeat, 0));
+  queue.Enqueue(new Event(DisplayMenu, 0));
+  queue.Enqueue(new Event(UpdateTemp, 0));
   menuUpButton.Init(menuUpPin, 1);
   menuConfirmButton.Init(menuConfirmPin, 2);
   lcd.begin(16, 2);
-  
 }
 
 void loop() {
   queue.PerformEvents();
   if(active){
-    digitalWrite(lcdScreenPin,HIGH);
+    digitalWrite(lcdScreenPin, HIGH);
   }
   else{
-    digitalWrite(lcdScreenPin,LOW);
+    digitalWrite(lcdScreenPin, LOW);
   }
   if (active && !settings)
   {
@@ -130,6 +132,7 @@ void loop() {
     {
       pooping = true;
       peeing = true;
+      actionDone = 1;
       LOGLN("SOMEBODY IS FLUSHING");
     }
     
@@ -144,6 +147,7 @@ void loop() {
         peeing = false;
         cleaning = false;
       }
+      actionDone = 2;
     }
 
     if (millis() - lastMotionTime > GetDelay() * 1000)  // when no motion is sensed for a configurable delay
@@ -170,13 +174,18 @@ void loop() {
       active = false;
     }
   }
-  if(!settings && menuUpButton.GetDown()){
+  if (!settings && menuUpButton.GetDown()){
     MenuUp();
   }
-  if(!active && !interruptEnabled){
+  if (!settings && menu == 0 && menuConfirmButton.GetDown())
+  {
+    DefaultMenuUp();
+  }
+  
+  if (!active && !interruptEnabled){
     EnableInterrupt();
   }
-  if(!firing && !fireInterruptEnabled){
+  if (!firing && !fireInterruptEnabled){
     EnableFireInterrupt();
   }
 }
@@ -209,7 +218,7 @@ void UpdateDistance(){
 // Fires the airwick via an interrupt button and disables the interrupt for
 // 20 seconsds
 void AirwickFireInterrupt(){
-  if(digitalRead(3) == LOW){
+  if(digitalRead(3) == LOW && fireInterruptEnabled){
     LOGLN(F("INTERRUPTFIRE"));
     detachInterrupt(fireButtonPin);
     AirwickFire(1);
@@ -239,6 +248,7 @@ void FireRoutine(){
   LOGLN(F("Fire"));
   active = false;  
   firing = true;
+  actionDone = 4;
   digitalWrite(airwick,HIGH);
   digitalWrite(fireStatePin,HIGH);
   queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
@@ -247,6 +257,7 @@ void FireRoutine(){
 void NoFire(){
   active = false;
   firing = false;
+  actionDone = 0;
 }
 
 //Disables the airwick
@@ -258,6 +269,7 @@ void AirwickOff(){
   digitalWrite(airwick,LOW);
   digitalWrite(fireStatePin,LOW);
   LOGLN(F("Reload"));
+  actionDone = 0;
 }
 
 //Changes to the active status via the motion sensor
@@ -271,6 +283,7 @@ void InterruptRoutine(){
   queue.Enqueue(new Event(CheckMotion,0));
   lastMotionTime = millis();
   interruptEnabled = false;
+  actionDone = 3;
 }
 
 //Enables enables the motion sensor interruupt
@@ -310,7 +323,7 @@ void UpdateTemp(){
     LOGLN(temperature);
   }
   else{
-    LOGLN(F("Error in temp sensor"));
+    //LOGLN(F("Error in temp sensor"));
   }
   queue.Enqueue(new Event(UpdateTemp, 1000));
 }
@@ -340,26 +353,47 @@ void DisplayMenu(){
     drawSpeed = 50;
   }
   else {
-    defaultMenu();
+    defaultMenu(menuDefault);
     drawSpeed = 250;
   }
 }
 
 // The default menu template
-void defaultMenu(){
-  LOGMENU("Menu: ");
-  LOGLNMENU(menu);
-  LOGLNMENU("DEFAULT MENU");
-  lcd.print("Temp: ");
-  lcd.print(temperature);
-  lcd.print("C         ");
-  lcd.setCursor(0, 1);
-  lcd.print("Shots: ");
-  lcd.print(GetShots());
-  lcd.print("          ");
+void defaultMenu(int mode){
+  if (mode == 0)
+  {
+    LOGMENU("Menu: ");
+    LOGLNMENU(menu);
+    LOGLNMENU("DEFAULT MENU");
+    lcd.print("Temp: ");
+    lcd.print(temperature);
+    lcd.print("C         ");
+    lcd.setCursor(0, 1);
+    lcd.print("Shots: ");
+    lcd.print(GetShots());
+    lcd.print("          ");
+  }
+  else
+  {
+    if (actionDone == 1) lcd.print("Flushed         ");
+    else if (actionDone == 2) lcd.print("Brush used      ");
+    else if (actionDone == 3) lcd.print("Motion detected ");
+    else if (actionDone == 4) lcd.print("Spray imminent  ");
+    else lcd.print("                ");
+    
+    lcd.setCursor(0, 1);
+    lcd.print("Action: ");
+    if (peeing) lcd.print("peeing  ");
+    else if (pooping) lcd.print("pooping ");
+    else if (cleaning) lcd.print("cleaning");
+    else lcd.print("        ");
+    LOGLNMENU("DEFAULT MENU 2")
+  }
 }
 
-
+void DefaultMenuUp(){
+  menuDefault = menuDefault + 1 > 1 ? 0 : menuDefault + 1;
+}
 
 // The menu before the settings template
 void previewSettingsMenu(){
@@ -571,6 +605,87 @@ void settingsMenu(){
       ResetMenuTimer();
     }
   }
+  else if (menuItem == 8)
+  {
+    if (!printed)
+    {
+      LOGLNMENU("SET SPRAYS");
+      lcd.print("Set number of   ");
+      lcd.setCursor(0,1);
+      lcd.print("sprays          ");
+      printed = true;
+    }
+    CheckTimer();
+    if (menuUpButton.GetDown())
+    {
+      menuItem = 11;
+      ResetMenuTimer();
+    }
+    if (menuConfirmButton.GetDown())
+    {
+      menuItem = 9;
+      ResetMenuTimer();
+    }
+  }
+  else if (menuItem == 9)
+  {
+    if (!printed)
+    {
+      LOGLNMENU("CHOOSE NUMBER 1 OR 2");
+      lcd.print(" Num 1 || Num 2 ");
+      lcd.setCursor(0,1);
+      if (action == 1)
+      {
+        lcd.print("   ^            ");
+      }
+      else
+      {
+        lcd.print("            ^   ");
+      }
+      printed = true;
+    }
+    CheckTimer();
+    if (menuUpButton.GetDown())
+    {
+      action = action + 1 > 2 ? 1 : action + 1;
+      ResetMenuTimer();
+    }
+    if (menuConfirmButton.GetDown())
+    {
+      menuItem = 10;
+      ResetMenuTimer();
+    }
+  }
+  else if (menuItem == 10)
+  {
+    
+    if (!printed)
+    {
+      LOGLNMENU("CHOOSING NEW AMOUNT SPRAYS");
+      lcd.print("Number ");
+      lcd.print(action);
+      lcd.print("        ");
+      printed = true;
+    }
+    lcd.setCursor(0, 1);
+    unsigned long sprays = GetNumberOfSprays(action);
+    CheckTimer();
+    if (menuUpButton.GetDown())
+    {
+      sprays = sprays + 1 > 5 ? 1 : sprays + 1;
+      SetNumberOfSprays(action, sprays);
+      LOGLN("Number of sprays: ");
+      LOGLN(sprays);
+      ResetMenuTimer();
+    }
+    else if (menuConfirmButton.GetDown())
+    {
+      menuItem = 8;
+      ResetMenuTimer();
+    }
+    lcd.print(sprays);
+    lcd.print(" sprays        ");
+  }
   else{
     if(!printed){
       LOGLNMENU("BACK");
@@ -642,4 +757,26 @@ void CheckMagnet(){
 
   toiletButtonPress = value >= 700;
   if(active) queue.Enqueue(new Event(CheckMagnet, 200));
+}
+
+void SetNumberOfSprays(int amount, int action){
+  if (action == 1)
+  {
+    EEPROM.write(4, amount);
+  }
+  else
+  {
+    EEPROM.write(5, amount);
+  }
+}
+
+int GetNumberOfSprays(int action){
+  if (action == 1)
+  {
+    return (int)EEPROM.read(4);
+  }
+  else
+  {
+    return (int)EEPROM.read(5);
+  }
 }

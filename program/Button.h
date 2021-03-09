@@ -39,14 +39,12 @@ public:
         pressed = true;
         pressedonce = true;
       }
-
     }
     else
     {
       pressed = false;
       pressedonce = false;
     }
-    
     return false;
   }
 };
