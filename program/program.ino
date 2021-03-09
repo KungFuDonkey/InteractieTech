@@ -39,7 +39,7 @@
 #define interruptPin digitalPinToInterrupt(motionPin)
 
 
-#define AirwickFireTime 16000
+#define AirwickFireTime 16200
 #define MinLight 600
 #define MinDistance 10
 
@@ -150,15 +150,15 @@ void loop() {
     {                                                   // the airwick will fire or not depending on the activity
       if (peeing)
       {
-        AirwickFire();
+        AirwickFire(1);
         LOGLN("FIRE BECAUSE PEEING");
         peeing = false;
         pooping = false;
       }                                            
       else if (pooping)
       {
-        AirwickFireTwice();
-        LOGLN("FIRE BECAUSE POOPING");
+        AirwickFire(2);
+        LOGLN("FIRE TWICE BECAUSE POOPING");
         pooping = false;
       }
       else            // this is also when someone just walks in and out and doesn't interact with the sensors
@@ -206,24 +206,13 @@ void UpdateDistance(){
   }
 }
 
-
-// Fires the airwick twice
-void AirwickFireTwice(){
-  if(!firing){
-    FireRoutine();
-    LOGLN(F("FIRE TWICE"));
-    queue.Enqueue(new Event(AirwickFire,AirwickFireTime + 1000));
-    active = false;
-  }
-}
-
 // Fires the airwick via an interrupt button and disables the interrupt for
 // 20 seconsds
 void AirwickFireInterrupt(){
   if(digitalRead(3) == LOW){
     LOGLN(F("INTERRUPTFIRE"));
     detachInterrupt(fireButtonPin);
-    AirwickFire();
+    AirwickFire(1);
     fireInterruptEnabled = false;
   }
 
@@ -236,15 +225,18 @@ void EnableFireInterrupt(){
 }
 
 //Fires the airwick once
-void AirwickFire(){
+void AirwickFire(int times){
   if(!firing){
-    FireRoutine();
-    LOGLN(F("Fire"));
+    for(int i = 0; i < times; i++){
+      queue.Enqueue(new Event(FireRoutine,i*(AirwickFireTime + 3000)));
+      queue.Enqueue(new Event(AirwickOff,i*(AirwickFireTime + 3000) + AirwickFireTime));
+    }
   }
 }
 
 // The standard routine for firing
 void FireRoutine(){
+  LOGLN(F("Fire"));
   active = false;  
   firing = true;
   digitalWrite(airwick,HIGH);
