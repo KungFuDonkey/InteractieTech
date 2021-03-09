@@ -1,4 +1,4 @@
-#define DEBUG
+#define RELEASE
 #define LOG(x)
 #define LOGLN(x)
 #define ENABLELOGGING
@@ -23,38 +23,27 @@
 #include "EEPROM.h"
 #include "stdint.h"
 
-
-
-#define returnToMenuTimer 10000
-
-#define airwick 13
+#define motionPin 2
+#define fireButtonPin digitalPinToInterrupt(3) 
 #define trigPin 10
 #define echoPin 11
+#define airwick 13
+
 #define LightSensorPin A0
-#define motionPin 2
-
 #define tempPin A1
-
-
-#define interruptPin digitalPinToInterrupt(motionPin)
-
-
-#define AirwickFireTime 16200
-#define MinLight 600
-#define MinDistance 10
-
-#define fireStatePin A4
-#define heartBeatPin A5
-
-#define lcdScreenPin A3
-
-
-#define fireButtonPin digitalPinToInterrupt(3) 
-
 #define magnetPin A2
 #define menuUpPin A2
 #define menuConfirmPin A2
+#define lcdScreenPin A3
+#define fireStatePin A4
+#define heartBeatPin A5
 
+#define interruptPin digitalPinToInterrupt(motionPin)
+
+#define returnToMenuTimer 10000
+#define AirwickFireTime 16200
+#define MinLight 600
+#define MinDistance 10
 #define menuCount 2
 
 OneWire oneWire(tempPin);
@@ -63,36 +52,39 @@ DallasTemperature sensors(&oneWire);
 
 LiquidCrystal lcd(9, 8, 7, 6, 5, 4);
 
-EventQueue queue; // gebruikt default constructor
+EventQueue queue; // Uses default constructor
 
 Button menuUpButton;
 Button menuConfirmButton;
-int drawSpeed = 1000;
-int magnet = HIGH;
-bool settings = false;
-bool active = false;
-int distance = MinDistance;
-long duration;
-int light = MinLight;
-float temperature;
-bool poopm = false;
-bool firing = false;
-int menu = 0;
+
 int heartBeat = LOW;
+bool active = false;
+
+int magnet = HIGH;
+int distance = MinDistance;
+float temperature;
+int light = MinLight;
+long duration;
+bool firing = false;
+bool toiletButtonPress = false;
+unsigned long lastMotionTime = 0;
+unsigned long lastAction = returnToMenuTimer;
+
+int drawSpeed = 250;
+bool settings = false;
+int menu = 0;
 int menuItem = 0;
 int menuDefault = 0;
-bool toiletButtonPress = false;
+bool printed = false;
 int actionDone = 0;
 int action = 1;
 
 bool interruptEnabled = true;
 bool fireInterruptEnabled = true;
+
 bool pooping = false;
 bool cleaning = false;
 int peeing = false;
-unsigned long lastMotionTime = 0;
-unsigned long lastAction = returnToMenuTimer;
-bool printed = false;
 
 void setup() {
   ENABLELOGGING;
@@ -120,12 +112,9 @@ void setup() {
 
 void loop() {
   queue.PerformEvents();
-  if(active){
-    digitalWrite(lcdScreenPin, HIGH);
-  }
-  else{
-    digitalWrite(lcdScreenPin, LOW);
-  }
+  if(active) digitalWrite(lcdScreenPin, HIGH);
+  else digitalWrite(lcdScreenPin, LOW);
+
   if (active && !settings)
   {
     if (toiletButtonPress && !cleaning) // magnet sensor is placed on the flush button in the toilet, which is the indicator that someone went to the toilet
@@ -200,18 +189,18 @@ void loop() {
 // you want to run as little interrupts as possible for better
 // code flow.
 void UpdateDistance(){
-  digitalWrite(trigPin,LOW);
+  digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
-  digitalWrite(trigPin,HIGH);
+  digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
-  digitalWrite(trigPin,LOW);
-  duration = pulseIn(echoPin,HIGH);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
   distance = duration / 68;
   LOG(F("Distance: "));
   LOGLN(distance);
   if(active)
   {
-    queue.Enqueue(new Event(UpdateDistance,2000));
+    queue.Enqueue(new Event(UpdateDistance, 2000));
   }
 }
 
@@ -229,7 +218,7 @@ void AirwickFireInterrupt(){
 
 // Enables the fire interrupt again
 void EnableFireInterrupt(){
-  attachInterrupt(fireButtonPin,AirwickFireInterrupt,FALLING);
+  attachInterrupt(fireButtonPin, AirwickFireInterrupt, FALLING);
   fireInterruptEnabled = true;
 }
 
@@ -237,8 +226,8 @@ void EnableFireInterrupt(){
 void AirwickFire(int times){
   if(!firing){
     for(int i = 0; i < times; i++){
-      queue.Enqueue(new Event(FireRoutine,i*(AirwickFireTime + 3000)));
-      queue.Enqueue(new Event(AirwickOff,i*(AirwickFireTime + 3000) + AirwickFireTime));
+      queue.Enqueue(new Event(FireRoutine, i * (AirwickFireTime + 3000)));
+      queue.Enqueue(new Event(AirwickOff, i * (AirwickFireTime + 3000) + AirwickFireTime));
     }
   }
 }
@@ -249,11 +238,12 @@ void FireRoutine(){
   active = false;  
   firing = true;
   actionDone = 4;
-  digitalWrite(airwick,HIGH);
-  digitalWrite(fireStatePin,HIGH);
-  queue.Enqueue(new Event(AirwickOff,AirwickFireTime));
+  digitalWrite(airwick, HIGH);
+  digitalWrite(fireStatePin, HIGH);
+  queue.Enqueue(new Event(AirwickOff, AirwickFireTime));
 }
 
+// Disable variables to let the system know it's done
 void NoFire(){
   active = false;
   firing = false;
@@ -266,8 +256,8 @@ void AirwickOff(){
   shots = shots - 1 < 0 ? 0 : shots - 1;
   WriteShots(shots);
   firing = false;
-  digitalWrite(airwick,LOW);
-  digitalWrite(fireStatePin,LOW);
+  digitalWrite(airwick, LOW);
+  digitalWrite(fireStatePin, LOW);
   LOGLN(F("Reload"));
   actionDone = 0;
 }
@@ -277,10 +267,10 @@ void InterruptRoutine(){
   active = true;
   detachInterrupt(interruptPin);
   LOGLN(F("interrupt"));
-  queue.Enqueue(new Event(UpdateDistance,0));
-  queue.Enqueue(new Event(UpdateLight,0));
-  queue.Enqueue(new Event(CheckMagnet,0));
-  queue.Enqueue(new Event(CheckMotion,0));
+  queue.Enqueue(new Event(UpdateDistance, 0));
+  queue.Enqueue(new Event(UpdateLight, 0));
+  queue.Enqueue(new Event(CheckMagnet, 0));
+  queue.Enqueue(new Event(CheckMotion, 0));
   lastMotionTime = millis();
   interruptEnabled = false;
   actionDone = 3;
@@ -310,7 +300,7 @@ void UpdateLight(){
 //Turns the beat led on or off
 void UpdateBeat(){
   heartBeat = !heartBeat;
-  digitalWrite(heartBeatPin,heartBeat);
+  digitalWrite(heartBeatPin, heartBeat);
   queue.Enqueue(new Event(UpdateBeat, 1000));
 }
 
@@ -342,8 +332,8 @@ void MenuUp(){
 // Prints the current menu to the lcd screen
 void DisplayMenu(){
 
-  queue.Enqueue(new Event(DisplayMenu,drawSpeed));
-  lcd.setCursor(0,0);
+  queue.Enqueue(new Event(DisplayMenu, drawSpeed));
+  lcd.setCursor(0, 0);
   if (menu == 1){
     previewSettingsMenu();
     drawSpeed = 50;
@@ -410,7 +400,7 @@ void previewSettingsMenu(){
     LOGLNMENU(menu);
     LOGLNMENU("PREVIEW SETTINGS");
     lcd.print("Settings        ");
-    lcd.setCursor(0,1);
+    lcd.setCursor(0, 1);
     lcd.print("                ");
     printed = true;
   }
@@ -454,18 +444,18 @@ void WriteShots(int shots){
     secondValue = (shots << 8) >> 8;
   }
 
-  EEPROM.write(0,firstValue);
-  EEPROM.write(1,secondValue);
+  EEPROM.write(0, firstValue);
+  EEPROM.write(1, secondValue);
 }
 
 // Prints the current settings menu to the lcd screen
 void settingsMenu(){
-  lcd.setCursor(0,0);                                                          // Instead of clearing, text is just printed over the old text, this is faster
+  lcd.setCursor(0, 0);                                                          // Instead of clearing, text is just printed over the old text, this is faster
   if(menuItem == 0){                                                           // Cycling through the menu is done with the menuItem variable
     if(!printed){                                                              // Only print if it hasn't already been printed, to make sure it doesn't print over itself
       LOGLNMENU("DELAY");
       lcd.print("Change delay    ");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print("                ");
       printed = true;
     }
@@ -508,7 +498,7 @@ void settingsMenu(){
     if(!printed){
       LOGLNMENU("RESET SPRAYS");
       lcd.print("Reset sprays    ");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print("                ");
       printed = true;
     }
@@ -564,7 +554,7 @@ void settingsMenu(){
     {
       LOGLNMENU("Set default distance");
       lcd.print("Reset distance  ");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print("                ");
       printed = true;
     }
@@ -586,7 +576,7 @@ void settingsMenu(){
     {
       LOGLNMENU("CONFIRM DISTANCE");
       lcd.print("Confirm?        ");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print("                ");
       printed = true;
     }
@@ -602,7 +592,6 @@ void settingsMenu(){
       menuItem = 5;
       ResetMenuTimer();
     }
-    
   }
   else if (menuItem == 7)
   {
@@ -610,7 +599,7 @@ void settingsMenu(){
     {
       LOGLNMENU("DISTANCE RESET");
       lcd.print("Default distance");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print("set             ");
       printed = true;
     }
@@ -627,7 +616,7 @@ void settingsMenu(){
     {
       LOGLNMENU("SET SPRAYS");
       lcd.print("Set number of   ");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print("sprays          ");
       printed = true;
     }
@@ -649,7 +638,7 @@ void settingsMenu(){
     {
       LOGLNMENU("CHOOSE NUMBER 1 OR 2");
       lcd.print(" Num 1 || Num 2 ");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       if (action == 1)
       {
         lcd.print("   ^            ");
@@ -704,7 +693,7 @@ void settingsMenu(){
     if(!printed){
       LOGLNMENU("BACK");
       lcd.print("Back            ");
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print("                ");
       printed = true;
     }
