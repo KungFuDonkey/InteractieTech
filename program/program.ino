@@ -658,7 +658,7 @@ void settingsMenu(){
   }
   else if (menuItem == 10)
   {
-    
+    int sprays = GetNumberOfSprays(action);
     if (!printed)
     {
       LOGLNMENU("CHOOSING NEW AMOUNT SPRAYS");
@@ -666,16 +666,15 @@ void settingsMenu(){
       lcd.print(action);
       lcd.print("        ");
       printed = true;
+      lcd.setCursor(0, 1);
+      lcd.print(sprays);
+      lcd.print(" sprays        ");
     }
-    lcd.setCursor(0, 1);
-    unsigned long sprays = GetNumberOfSprays(action);
     CheckTimer();
     if (menuUpButton.GetDown())
     {
       sprays = sprays + 1 > 5 ? 1 : sprays + 1;
-      SetNumberOfSprays(action, sprays);
-      LOGLN("Number of sprays: ");
-      LOGLN(sprays);
+      SetNumberOfSprays(sprays, action);
       ResetMenuTimer();
     }
     else if (menuConfirmButton.GetDown())
@@ -683,10 +682,10 @@ void settingsMenu(){
       menuItem = 8;
       ResetMenuTimer();
     }
-    lcd.print(sprays);
-    lcd.print(" sprays        ");
+    
   }
-  else{
+  else
+  {
     if(!printed){
       LOGLNMENU("BACK");
       lcd.print("Back            ");
