@@ -371,7 +371,14 @@ void defaultMenu(int mode){
     lcd.setCursor(0, 1);
     lcd.print("Shots: ");
     lcd.print(GetShots());
-    lcd.print("          ");
+    if (GetShots() < 100)
+    {
+      lcd.print("  !!     ");
+    }
+    else
+    {
+      lcd.print("         ");
+    }
   }
   else
   {
@@ -434,35 +441,44 @@ int GetShots(){
 }
 // Writes the shots to the EEPROM
 void WriteShots(int shots){
-  int firstValue = shots >> 8;
-  int secondValue = (shots << 8) >> 8;
+  int firstValue;
+  int secondValue;
+  if (shots <= 0)                                                              // No negative shots
+  {
+    firstValue = 0;
+    secondValue = 0;
+  }
+  else
+  {
+    firstValue = shots >> 8;
+    secondValue = (shots << 8) >> 8;
+  }
+
   EEPROM.write(0,firstValue);
   EEPROM.write(1,secondValue);
 }
 
 // Prints the current settings menu to the lcd screen
 void settingsMenu(){
-  lcd.setCursor(0,0);
-  if(menuItem == 0){
-    if(!printed){
+  lcd.setCursor(0,0);                                                          // Instead of clearing, text is just printed over the old text, this is faster
+  if(menuItem == 0){                                                           // Cycling through the menu is done with the menuItem variable
+    if(!printed){                                                              // Only print if it hasn't already been printed, to make sure it doesn't print over itself
       LOGLNMENU("DELAY");
       lcd.print("Change delay    ");
       lcd.setCursor(0,1);
       lcd.print("                ");
       printed = true;
     }
-    bool confirm = menuConfirmButton.GetDown();
-    bool up = menuUpButton.GetDown(); 
-    if (confirm)
+    CheckTimer();                                                              // Check if there hasn't been activity in the menu, if not, return to default menu
+    if (menuConfirmButton.GetDown())                                           // When confirm button is pressed, go into the selected settings panel
     {
       menuItem = 1;
-      ResetMenuTimer();
+      ResetMenuTimer();                                                        // Reset the timer for returning to default menu
     }
-    else if (up){
+    else if (menuUpButton.GetDown()){                                          // When up button is pressed, go to the next setting
       menuItem = 2;
       ResetMenuTimer();
     }
-    CheckTimer();
   }
   else if(menuItem == 1){
     LOGLNMENU("NEWDELAY");
@@ -475,7 +491,7 @@ void settingsMenu(){
     unsigned long delay = GetDelay();
     if (menuUpButton.GetDown())
     {
-      delay = delay + 5 > 60 ? 15 : delay + 5;
+      delay = delay + 5 > 60 ? 15 : delay + 5;                                 // Change delay with intervals of 5 and a minimum of 15 seconds
       WriteDelay(delay);
       ResetMenuTimer();
     }
@@ -518,8 +534,8 @@ void settingsMenu(){
     CheckTimer();
     if (menuConfirmButton.GetDown())
     {
-      WriteShots(2400);
-      menuItem = 4;
+      WriteShots(2400);                                                        // On average a can of air freshener contains 2400 shots, so when it is replaced
+      menuItem = 4;                                                                                                                   // the value can be reset
       ResetMenuTimer();
     }
     if (menuUpButton.GetDown())
@@ -577,8 +593,8 @@ void settingsMenu(){
     CheckTimer();
     if (menuConfirmButton.GetDown())
     {
-      setDefaultDistance();
-      menuItem = 7;
+      setDefaultDistance();                                                    // Set the default distance that is used to check if the brush is being used,
+      menuItem = 7;                                                                                                        // this is measured automatically
       ResetMenuTimer();
     }
     if (menuUpButton.GetDown())
@@ -647,7 +663,7 @@ void settingsMenu(){
     CheckTimer();
     if (menuUpButton.GetDown())
     {
-      action = action + 1 > 2 ? 1 : action + 1;
+      action = action + 1 > 2 ? 1 : action + 1;                                // action means doing a number 1 or number 2
       ResetMenuTimer();
     }
     if (menuConfirmButton.GetDown())
@@ -673,8 +689,8 @@ void settingsMenu(){
     CheckTimer();
     if (menuUpButton.GetDown())
     {
-      sprays = sprays + 1 > 5 ? 1 : sprays + 1;
-      SetNumberOfSprays(sprays, action);
+      sprays = sprays + 1 > 5 ? 0 : sprays + 1;                                // Sprays can be set manually, ranging from 0 to 5. This maximum is chosen to
+      SetNumberOfSprays(sprays, action);                                                                             // prevent over using the air freshener
       ResetMenuTimer();
     }
     else if (menuConfirmButton.GetDown())
@@ -682,7 +698,6 @@ void settingsMenu(){
       menuItem = 8;
       ResetMenuTimer();
     }
-    
   }
   else
   {
@@ -695,7 +710,7 @@ void settingsMenu(){
     }
     CheckTimer();
     if(menuConfirmButton.GetDown()){
-      settings = false;
+      settings = false;                                                        // Go back to preview settings
       menu = 1;
       ResetMenuTimer();
     }
@@ -732,6 +747,7 @@ int getDefaultDistance(){
   return EEPROM.read(3);
 }
 
+// Check if there is motion
 void CheckMotion(){
   int motion = digitalRead(motionPin);
   LOG(F("Motion: "));
@@ -744,6 +760,7 @@ void CheckMotion(){
   if(active) queue.Enqueue(new Event(CheckMotion, 500));
 }
 
+// Check if the toilet is flushed
 void CheckMagnet(){
   int value = analogRead(magnetPin);
 
@@ -758,6 +775,7 @@ void CheckMagnet(){
   if(active) queue.Enqueue(new Event(CheckMagnet, 200));
 }
 
+// Set the number of sprays for a number 1 or number 2
 void SetNumberOfSprays(int amount, int action){
   if (action == 1)
   {
@@ -769,6 +787,7 @@ void SetNumberOfSprays(int amount, int action){
   }
 }
 
+// Gets number of spray for a number 1 or number 2
 int GetNumberOfSprays(int action){
   if (action == 1)
   {
